@@ -305,7 +305,7 @@ const DB=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexe
 
 /* ---------- settings ---------- */
 const PRESETS={venice:'https://api.venice.ai/api/v1',openrouter:'https://openrouter.ai/api/v1'};
-const DEF={textPreset:'venice',baseUrl:PRESETS.venice,apiKey:'',textModel:'zai-org-glm-4.6',imgType:'venice',imgBase:'',imgKey:'',imgModel:'venice-sd35',artStyle:'semi-realistic anime illustration, soft cinematic lighting, rich detail, warm color grading',autoImages:true,authorNote:''};
+const DEF={textPreset:'openrouter',baseUrl:PRESETS.openrouter,apiKey:'',textModel:'z-ai/glm-4.6',imgType:'off',imgBase:'',imgKey:'',imgModel:'venice-sd35',artStyle:'semi-realistic anime illustration, soft cinematic lighting, rich detail, warm color grading',autoImages:true,authorNote:''};
 let S={...DEF};
 const saveSettings=()=>DB.set('settings',S);
 
@@ -421,6 +421,7 @@ async function chat(messages,{max=1600,temp=0.9}={}){
  if(!S.apiKey)throw new Error('Add your API key in Settings first.');
  const body={model:S.textModel,messages,temperature:temp,max_tokens:max};
  if(/venice\.ai/.test(S.baseUrl))body.venice_parameters={include_venice_system_prompt:false,disable_thinking:true};
+ if(/openrouter\.ai/.test(S.baseUrl))body.reasoning={enabled:false};
  const r=await fetchT(base()+'/chat/completions',{method:'POST',headers:hdr(S.apiKey),body:JSON.stringify(body)},150000);
  if(!r.ok)throw new Error(await errText(r));
  const d=await r.json();return String(d.choices?.[0]?.message?.content||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim()}
@@ -601,7 +602,7 @@ function newGame(s,player){const o=s.opening||{};
 async function viewHome(){VIEW='home';STORY=null;closeSheet();const stories=await allStories();const saves={};for(const s of stories){saves[s.id]=await DB.get('save:'+s.id);await preload(s.id)}
  app.innerHTML=`<div class="page">
  <header class="home-h"><div><h1 class="brand">Lit <span>Windows</span></h1><p class="sub">Story games set in houses that keep living when you leave the room.</p></div><button class="icon-btn" data-act="settings" aria-label="Settings">${ic('gear')}</button></header>
- ${S.apiKey?'':`<div class="notice"><b>Add your API key to start playing.</b><span>Stories run on your own Venice account, or any OpenAI-compatible provider. The key stays on this device.</span><button class="btn small" data-act="settings">Open settings</button></div>`}
+ ${S.apiKey?'':`<div class="notice"><b>Add your API key to start playing.</b><span>Stories run on your own OpenRouter account, or any OpenAI-compatible provider. The key stays on this device.</span><button class="btn small" data-act="settings">Open settings</button></div>`}
  <h2 class="sec">Library</h2>
  <div class="shelf">${stories.map(s=>{const sv=saves[s.id];const k=imgKey('cover',s.id);return `<button class="card" data-act="open" data-id="${esc(s.id)}"><div class="cover${hasImg(k)}" ${imgAttr(k)}>${houseFig(s.id)}</div><div class="meta"><div class="tags">${arr(s.tags).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div><h3>${esc(s.title)}</h3><p>${esc(s.tagline)}</p><span class="prog">${sv?(sv.ended?'Finished · '+esc(sv.ended.title):`Day ${sv.day} · ${clock(sv.min)}`):'Not started'}</span></div></button>`}).join('')}
  <button class="card create" data-act="create">${ic('plus')}<b>Create your own</b><span>Describe a premise and the AI builds the house, cast, daily events and endings.</span></button></div></div>`;
