@@ -304,8 +304,10 @@ const DB=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexe
  return{get:(k,s='kv')=>op(s,'readonly',x=>x.get(k)),set:(k,v,s='kv')=>op(s,'readwrite',x=>x.put(v,k)),del:(k,s='kv')=>op(s,'readwrite',x=>x.delete(k)),keys:(s='kv')=>op(s,'readonly',x=>x.getAllKeys()),clear:s=>op(s,'readwrite',x=>x.clear())}})();
 
 /* ---------- settings ---------- */
-const PRESETS={venice:'https://api.venice.ai/api/v1',openrouter:'https://openrouter.ai/api/v1'};
-const DEF={textPreset:'openrouter',baseUrl:PRESETS.openrouter,apiKey:'',textModel:'z-ai/glm-4.6',imgType:'off',imgBase:'',imgKey:'',imgModel:'venice-sd35',artStyle:'semi-realistic anime illustration, soft cinematic lighting, rich detail, warm color grading',autoImages:true,authorNote:''};
+const PRESETS={arliai:'https://api.arliai.com/v1',venice:'https://api.venice.ai/api/v1',openrouter:'https://openrouter.ai/api/v1'};
+const TEXT_DEF={arliai:'GLM-4.6-Derestricted',venice:'zai-org-glm-4.6',openrouter:'z-ai/glm-4.6'};
+const IMG_DEF={arliai:'Krea-2-Turbo',venice:'venice-sd35'};
+const DEF={textPreset:'arliai',baseUrl:PRESETS.arliai,apiKey:'',textModel:TEXT_DEF.arliai,imgType:'arliai',imgBase:'',imgKey:'',imgModel:IMG_DEF.arliai,artStyle:'semi-realistic anime illustration, soft cinematic lighting, rich detail, warm color grading',autoImages:true,authorNote:''};
 let S={...DEF};
 const saveSettings=()=>DB.set('settings',S);
 
@@ -417,14 +419,20 @@ async function errText(r){let b='';try{b=await r.text();const j=JSON.parse(b);b=
  const m={401:'Your API key was rejected. Check it in Settings.',402:'Your AI account is out of credits.',429:'Too many requests. Wait a few seconds and try again.'}[r.status];
  return m||`AI error ${r.status}: ${String(b).slice(0,160)}`}
 const base=()=>S.baseUrl.replace(/\/+$/,'');
-async function chat(messages,{max=1600,temp=0.9}={}){
+/* Some plans (ArliAI Core) allow one request at a time: queue AI calls, story replies first. */
+const LOCK={on:false,q:[]};
+const oneAtATime=()=>/arliai\.com/.test(S.baseUrl)||S.imgType==='arliai'||/arliai\.com/.test(S.imgBase||'');
+async function withLock(first,fn){if(!oneAtATime())return fn();await new Promise(r=>{if(!LOCK.on){LOCK.on=true;r()}else first?LOCK.q.unshift(r):LOCK.q.push(r)});try{return await fn()}finally{const n=LOCK.q.shift();n?n():LOCK.on=false}}
+async function chat(messages,{max=2400,temp=0.9}={}){
  if(!S.apiKey)throw new Error('Add your API key in Settings first.');
  const body={model:S.textModel,messages,temperature:temp,max_tokens:max};
  if(/venice\.ai/.test(S.baseUrl))body.venice_parameters={include_venice_system_prompt:false,disable_thinking:true};
  if(/openrouter\.ai/.test(S.baseUrl))body.reasoning={enabled:false};
- const r=await fetchT(base()+'/chat/completions',{method:'POST',headers:hdr(S.apiKey),body:JSON.stringify(body)},150000);
- if(!r.ok)throw new Error(await errText(r));
- const d=await r.json();return String(d.choices?.[0]?.message?.content||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim()}
+ if(/arliai\.com/.test(S.baseUrl))body.chat_template_kwargs={enable_thinking:false};
+ return withLock(true,async()=>{
+  const r=await fetchT(base()+'/chat/completions',{method:'POST',headers:hdr(S.apiKey),body:JSON.stringify(body)},150000);
+  if(!r.ok)throw new Error(await errText(r));
+  const d=await r.json();return String(d.choices?.[0]?.message?.content||'').replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/^[\s\S]*?<\/think>/i,'').trim()})}
 function fixCtl(s){let o='',q=false,e=false;for(const ch of s){if(q){if(e){e=false;o+=ch;continue}if(ch==='\\'){e=true;o+=ch;continue}if(ch==='"'){q=false;o+=ch;continue}if(ch==='\n'){o+='\\n';continue}if(ch==='\r')continue;if(ch==='\t'){o+='\\t';continue}o+=ch}else{if(ch==='"')q=true;o+=ch}}return o}
 function parseJSON(raw){let t=String(raw||'');const f=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(f)t=f[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<=a)return null;let s=t.slice(a,b+1);
  for(const fx of [x=>x,fixCtl,x=>fixCtl(x).replace(/,\s*([}\]])/g,'$1')]){try{return JSON.parse(fx(s))}catch{}}return null}
@@ -433,8 +441,13 @@ function salvage(raw){const out=[];const re=/"who"\s*:\s*"([^"]*)"\s*,\s*"text"\
 
 const NEG='child, kid, minor, underage, childlike, young-looking, school uniform, deformed, extra fingers, extra limbs, blurry, lowres, text, watermark, logo';
 function b64Blob(b,type){const bin=atob(b.replace(/^data:[^,]+,/,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type})}
-async function genImage(prompt,w,h){
+const mimeOf=b=>b.startsWith('/9j/')?'image/jpeg':b.startsWith('UklGR')?'image/webp':'image/png';
+const genImage=(prompt,w,h)=>withLock(false,()=>genImageNow(prompt,w,h));
+async function genImageNow(prompt,w,h){
  const key=S.imgKey||S.apiKey;if(!key)throw new Error('Add your API key in Settings first.');
+ if(S.imgType==='arliai'){
+  const r=await fetchT('https://api.arliai.com/v1/txt2img',{method:'POST',headers:hdr(key),body:JSON.stringify({sd_model_checkpoint:S.imgModel,prompt:prompt.slice(0,1800),negative_prompt:NEG,width:w,height:h})},240000);
+  if(!r.ok)throw new Error(await errText(r));const d=await r.json();let b=d.images?.[0]||d.data?.[0]?.b64_json;if(!b)throw new Error('The image service returned nothing.');b=String(b).replace(/^data:[^,]+,/,'');return b64Blob(b,mimeOf(b))}
  if(S.imgType==='venice'){
   const r=await fetchT('https://api.venice.ai/api/v1/image/generate',{method:'POST',headers:hdr(key),body:JSON.stringify({model:S.imgModel,prompt:prompt.slice(0,1450),negative_prompt:NEG,width:w,height:h,format:'webp',safe_mode:false,hide_watermark:true,return_binary:false})},180000);
   if(!r.ok)throw new Error(await errText(r));const d=await r.json();const b=d.images?.[0];if(!b)throw new Error('The image service returned nothing.');return b64Blob(b,'image/webp')}
@@ -602,7 +615,7 @@ function newGame(s,player){const o=s.opening||{};
 async function viewHome(){VIEW='home';STORY=null;closeSheet();const stories=await allStories();const saves={};for(const s of stories){saves[s.id]=await DB.get('save:'+s.id);await preload(s.id)}
  app.innerHTML=`<div class="page">
  <header class="home-h"><div><h1 class="brand">Lit <span>Windows</span></h1><p class="sub">Story games set in houses that keep living when you leave the room.</p></div><button class="icon-btn" data-act="settings" aria-label="Settings">${ic('gear')}</button></header>
- ${S.apiKey?'':`<div class="notice"><b>Add your API key to start playing.</b><span>Stories run on your own OpenRouter account, or any OpenAI-compatible provider. The key stays on this device.</span><button class="btn small" data-act="settings">Open settings</button></div>`}
+ ${S.apiKey?'':`<div class="notice"><b>Add your API key to start playing.</b><span>Stories run on your own ArliAI account, or OpenRouter, Venice or any OpenAI-compatible provider. The key stays on this device.</span><button class="btn small" data-act="settings">Open settings</button></div>`}
  <h2 class="sec">Library</h2>
  <div class="shelf">${stories.map(s=>{const sv=saves[s.id];const k=imgKey('cover',s.id);return `<button class="card" data-act="open" data-id="${esc(s.id)}"><div class="cover${hasImg(k)}" ${imgAttr(k)}>${houseFig(s.id)}</div><div class="meta"><div class="tags">${arr(s.tags).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div><h3>${esc(s.title)}</h3><p>${esc(s.tagline)}</p><span class="prog">${sv?(sv.ended?'Finished · '+esc(sv.ended.title):`Day ${sv.day} · ${clock(sv.min)}`):'Not started'}</span></div></button>`}).join('')}
  <button class="card create" data-act="create">${ic('plus')}<b>Create your own</b><span>Describe a premise and the AI builds the house, cast, daily events and endings.</span></button></div></div>`;
@@ -696,14 +709,14 @@ function galleryBody(){const sid=STORY.id;const ks=[...URLS.keys()].filter(k=>k.
 function refreshSheet(){if(SHEET==='map')$('#sb').innerHTML=mapBody();else if(SHEET==='chars')$('#sb').innerHTML=charsBody();else if(SHEET==='gallery')$('#sb').innerHTML=galleryBody()}
 function openSettings(){SHEET='settings';const o=(v,l,cur)=>`<option value="${v}"${v===cur?' selected':''}>${l}</option>`;
  openSheet('Settings',`<div class="group"><h3>Story AI</h3>
- <label>Provider<select id="s-preset">${o('venice','Venice',S.textPreset)}${o('openrouter','OpenRouter',S.textPreset)}${o('custom','Custom (OpenAI-compatible)',S.textPreset)}</select></label>
+ <label>Provider<select id="s-preset">${o('arliai','ArliAI',S.textPreset)}${o('openrouter','OpenRouter',S.textPreset)}${o('venice','Venice',S.textPreset)}${o('custom','Custom (OpenAI-compatible)',S.textPreset)}</select></label>
  <label${S.textPreset==='custom'?'':' hidden'} id="s-base-l">Base URL<input id="s-base" value="${esc(S.baseUrl)}" placeholder="https://…/v1" autocomplete="off"></label>
  <label>API key<input id="s-key" type="password" value="${esc(S.apiKey)}" placeholder="Paste your key" autocomplete="off"></label>
  <label>Model<input id="s-model" list="dl-text" value="${esc(S.textModel)}" autocomplete="off"></label><datalist id="dl-text"></datalist>
  <div class="btn-row"><button class="btn ghost small" data-act="loadmodels">Load model list</button><button class="btn ghost small" data-act="testai">Test connection</button></div>
  <p class="muted">Your key is stored only on this device and is sent only to the provider you pick.</p></div>
  <div class="group"><h3>Images</h3>
- <label>Image service<select id="s-imgtype">${o('venice','Venice',S.imgType)}${o('openai','OpenAI-compatible',S.imgType)}${o('off','Off',S.imgType)}</select></label>
+ <label>Image service<select id="s-imgtype">${o('arliai','ArliAI',S.imgType)}${o('venice','Venice',S.imgType)}${o('openai','OpenAI-compatible',S.imgType)}${o('off','Off',S.imgType)}</select></label>
  <label${S.imgType==='openai'?'':' hidden'} id="s-ibase-l">Image base URL<input id="s-ibase" value="${esc(S.imgBase)}" placeholder="Blank uses the story AI's URL" autocomplete="off"></label>
  <label>Image API key<input id="s-ikey" type="password" value="${esc(S.imgKey)}" placeholder="Blank uses the story AI key" autocomplete="off"></label>
  <label>Image model<input id="s-imodel" list="dl-img" value="${esc(S.imgModel)}" autocomplete="off"></label><datalist id="dl-img"></datalist>
@@ -712,9 +725,9 @@ function openSettings(){SHEET='settings';const o=(v,l,cur)=>`<option value="${v}
  <div class="group"><h3>Narrator</h3><label>Extra instructions for the AI<textarea id="s-note" rows="3" placeholder="e.g. Write longer scenes. More banter.">${esc(S.authorNote)}</textarea></label></div>
  <div class="group"><h3>Your data</h3><p class="muted">Saves and images live on this device. Export a backup before clearing Safari data.</p><div class="btn-row"><button class="btn ghost small" data-act="export">Export backup</button><label class="btn ghost small" style="display:inline-flex">Import backup<input type="file" id="s-import" accept="application/json,.json" hidden></label><button class="btn danger small" data-act="clearimgs" id="clrbtn">Delete all images</button></div></div>`);
  const bind=(id,fn,ev='change')=>$(id).addEventListener(ev,()=>{fn($(id));saveSettings()});
- bind('#s-preset',el=>{S.textPreset=el.value;if(PRESETS[el.value]){S.baseUrl=PRESETS[el.value];$('#s-base').value=S.baseUrl}$('#s-base-l').hidden=el.value!=='custom';if(el.value==='openrouter'&&!S.textModel.includes('/'))$('#s-model').value=S.textModel='z-ai/glm-4.6';if(el.value==='venice'&&S.textModel.includes('/'))$('#s-model').value=S.textModel='zai-org-glm-4.6'});
+ bind('#s-preset',el=>{S.textPreset=el.value;if(PRESETS[el.value]){S.baseUrl=PRESETS[el.value];$('#s-base').value=S.baseUrl;$('#s-model').value=S.textModel=TEXT_DEF[el.value]}$('#s-base-l').hidden=el.value!=='custom'});
  bind('#s-base',el=>S.baseUrl=el.value.trim());bind('#s-key',el=>S.apiKey=el.value.trim());bind('#s-model',el=>S.textModel=el.value.trim());
- bind('#s-imgtype',el=>{S.imgType=el.value;$('#s-ibase-l').hidden=el.value!=='openai'});bind('#s-ibase',el=>S.imgBase=el.value.trim());bind('#s-ikey',el=>S.imgKey=el.value.trim());bind('#s-imodel',el=>S.imgModel=el.value.trim());
+ bind('#s-imgtype',el=>{S.imgType=el.value;$('#s-ibase-l').hidden=el.value!=='openai';if(IMG_DEF[el.value])$('#s-imodel').value=S.imgModel=IMG_DEF[el.value]});bind('#s-ibase',el=>S.imgBase=el.value.trim());bind('#s-ikey',el=>S.imgKey=el.value.trim());bind('#s-imodel',el=>S.imgModel=el.value.trim());
  bind('#s-style',el=>S.artStyle=el.value.trim()||DEF.artStyle);bind('#s-auto',el=>S.autoImages=el.checked);bind('#s-note',el=>S.authorNote=el.value.trim());
  $('#s-import').addEventListener('change',importBackup)}
 
@@ -819,7 +832,8 @@ const ACT={
  ctab:b=>{cTab=b.dataset.t;refreshSheet()},
  setpor:async b=>{const blob=await DB.get(b.dataset.k,'img');if(!blob)return;const k=imgKey('por',STORY.id,selChar);await DB.set(k,blob,'img');setURL(k,blob);paint(k);refreshSheet();toast('Portrait updated.',true)},
  async loadmodels(){try{const r1=await fetch(base()+'/models?type=text',{headers:S.apiKey?{Authorization:'Bearer '+S.apiKey}:{}});const d1=await r1.json();$('#dl-text').innerHTML=arr(d1.data).map(m=>`<option value="${esc(m.id)}">`).join('');
-  if(S.imgType==='venice'){const r2=await fetch('https://api.venice.ai/api/v1/models?type=image');const d2=await r2.json();$('#dl-img').innerHTML=arr(d2.data).map(m=>`<option value="${esc(m.id)}">`).join('')}toast(`Loaded ${arr(d1.data).length} models. Tap a model field to pick one.`,true)}catch{toast('Could not load the model list.')}},
+  if(S.imgType==='venice'){const r2=await fetch('https://api.venice.ai/api/v1/models?type=image');const d2=await r2.json();$('#dl-img').innerHTML=arr(d2.data).map(m=>`<option value="${esc(m.id)}">`).join('')}
+  if(S.imgType==='arliai'){const r2=await fetch('https://api.arliai.com/v1/img-models',{headers:{Authorization:'Bearer '+(S.imgKey||S.apiKey)}});const d2=await r2.json();const list=Array.isArray(d2)?d2:arr(d2.data||d2.models);$('#dl-img').innerHTML=list.map(m=>typeof m==='string'?m:(m.id||m.name||m.model_name||'')).filter(Boolean).map(id=>`<option value="${esc(id)}">`).join('')}toast(`Loaded ${arr(d1.data).length} models. Tap a model field to pick one.`,true)}catch{toast('Could not load the model list.')}},
  async testai(b){b.disabled=true;b.textContent='Testing…';try{const t=await chat([{role:'user',content:'Reply with the single word: ready'}],{max:20,temp:0});toast('Connected. The AI said: '+t.slice(0,40),true)}catch(e){toast(e.message)}b.disabled=false;b.textContent='Test connection'},
  export:()=>exportBackup(),
  async clearimgs(b){if(armed!=='clr'){armed='clr';b.textContent='Tap again to delete every image';return}armed=null;await DB.clear('img');URLS.forEach(u=>URL.revokeObjectURL(u));URLS.clear();b.textContent='Images deleted';toast('All images deleted.',true)},
