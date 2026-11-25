@@ -420,19 +420,40 @@ async function errText(r){let b='';try{b=await r.text();const j=JSON.parse(b);b=
  return m||`AI error ${r.status}: ${String(b).slice(0,160)}`}
 const base=()=>S.baseUrl.replace(/\/+$/,'');
 /* Some plans (ArliAI Core) allow one request at a time: queue AI calls, story replies first. */
-const LOCK={on:false,q:[]};
+const LOCK={on:false,q:[],holder:null};let STATUS='Writing the scene…';
+function setStatus(t){STATUS=t;const s=$('.typing .st');if(s)s.textContent=t}
 const oneAtATime=()=>/arliai\.com/.test(S.baseUrl)||S.imgType==='arliai'||/arliai\.com/.test(S.imgBase||'');
-async function withLock(first,fn){if(!oneAtATime())return fn();await new Promise(r=>{if(!LOCK.on){LOCK.on=true;r()}else first?LOCK.q.unshift(r):LOCK.q.push(r)});try{return await fn()}finally{const n=LOCK.q.shift();n?n():LOCK.on=false}}
-async function chat(messages,{max=2400,temp=0.9}={}){
+async function withLock(kind,fn){if(!oneAtATime())return fn();if(kind==='text'&&LOCK.on&&LOCK.holder==='image')setStatus('Finishing a picture first, then writing…');
+ await new Promise(r=>{if(!LOCK.on){LOCK.on=true;r()}else kind==='text'?LOCK.q.unshift(r):LOCK.q.push(r)});LOCK.holder=kind;
+ try{return await fn()}finally{LOCK.holder=null;const n=LOCK.q.shift();n?n():LOCK.on=false}}
+const stripThink=s=>String(s||'').replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/^[\s\S]*?<\/think>/i,'').trim();
+async function chat(messages,{max=2400,temp=0.9,onText}={}){
  if(!S.apiKey)throw new Error('Add your API key in Settings first.');
- const body={model:S.textModel,messages,temperature:temp,max_tokens:max};
+ const msgs=/glm/i.test(S.textModel)?messages.map((m,i)=>i===messages.length-1&&m.role==='user'?{...m,content:m.content+'\n/nothink'}:m):messages;
+ const body={model:S.textModel,messages:msgs,temperature:temp,max_tokens:max};
+ if(onText)body.stream=true;
  if(/venice\.ai/.test(S.baseUrl))body.venice_parameters={include_venice_system_prompt:false,disable_thinking:true};
  if(/openrouter\.ai/.test(S.baseUrl))body.reasoning={enabled:false};
  if(/arliai\.com/.test(S.baseUrl))body.chat_template_kwargs={enable_thinking:false};
- return withLock(true,async()=>{
+ return withLock('text',async()=>{
+  if(onText)setStatus('Writing the scene…');
   const r=await fetchT(base()+'/chat/completions',{method:'POST',headers:hdr(S.apiKey),body:JSON.stringify(body)},150000);
   if(!r.ok)throw new Error(await errText(r));
-  const d=await r.json();return String(d.choices?.[0]?.message?.content||'').replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/^[\s\S]*?<\/think>/i,'').trim()})}
+  if(onText&&r.body&&/event-stream/.test(r.headers.get('content-type')||'')){
+   const rd=r.body.getReader(),dec=new TextDecoder();let buf='',out='';
+   for(;;){const{value,done}=await Promise.race([rd.read(),new Promise((_,no)=>setTimeout(()=>no(new Error('The AI stopped responding. Try again.')),90000))]);if(done)break;
+    buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;const p=line.slice(5).trim();if(!p||p==='[DONE]')continue;
+     try{const j=JSON.parse(p);if(j.error)throw new Error(j.error.message||'AI error');const d=j.choices?.[0]?.delta?.content||'';if(d){out+=d;onText(out)}}catch(e){if(!(e instanceof SyntaxError))throw e}}}
+   return stripThink(out)}
+  const d=await r.json();return stripThink(d.choices?.[0]?.message?.content)})}
+const unq=s=>{s=s.replace(/\\$/,'');try{return JSON.parse('"'+s+'"')}catch{return s.replace(/\\n/g,'\n').replace(/\\"/g,'"')}};
+function beatHTML(who,t){const c=findChar(who);if(!c)return `<p class="m-n">${fmt(t)}</p>`;const k=imgKey('por',STORY.id,c.id);return `<div class="m-c" style="--c:${esc(c.color)}"><span class="av${hasImg(k)}" ${imgAttr(k)}>${esc(c.name[0])}</span><div><span class="m-name">${esc(c.name)}</span><div class="bubble">${fmt(t)}</div></div></div>`}
+function liveUpdate(txt){if(VIEW!=='play')return;const el=$('#live');if(!el)return;
+ if(/<think>/i.test(txt)&&!/<\/think>/i.test(txt)){setStatus('Thinking…');return}
+ const t=stripThink(txt);setStatus('Writing the scene…');
+ const re=/"who"\s*:\s*"([^"]*)"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"/g;let h='',m,end=0;while((m=re.exec(t))){h+=beatHTML(m[1],unq(m[2]));end=re.lastIndex}
+ const p=t.slice(end).match(/"who"\s*:\s*"([^"]*)"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)$/);if(p&&p[2])h+=beatHTML(p[1],unq(p[2]));
+ el.innerHTML=h;const log=$('#log');if(log)log.scrollTop=log.scrollHeight}
 function fixCtl(s){let o='',q=false,e=false;for(const ch of s){if(q){if(e){e=false;o+=ch;continue}if(ch==='\\'){e=true;o+=ch;continue}if(ch==='"'){q=false;o+=ch;continue}if(ch==='\n'){o+='\\n';continue}if(ch==='\r')continue;if(ch==='\t'){o+='\\t';continue}o+=ch}else{if(ch==='"')q=true;o+=ch}}return o}
 function parseJSON(raw){let t=String(raw||'');const f=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(f)t=f[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<=a)return null;let s=t.slice(a,b+1);
  for(const fx of [x=>x,fixCtl,x=>fixCtl(x).replace(/,\s*([}\]])/g,'$1')]){try{return JSON.parse(fx(s))}catch{}}return null}
@@ -442,7 +463,7 @@ function salvage(raw){const out=[];const re=/"who"\s*:\s*"([^"]*)"\s*,\s*"text"\
 const NEG='child, kid, minor, underage, childlike, young-looking, school uniform, deformed, extra fingers, extra limbs, blurry, lowres, text, watermark, logo';
 function b64Blob(b,type){const bin=atob(b.replace(/^data:[^,]+,/,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type})}
 const mimeOf=b=>b.startsWith('/9j/')?'image/jpeg':b.startsWith('UklGR')?'image/webp':'image/png';
-const genImage=(prompt,w,h)=>withLock(false,()=>genImageNow(prompt,w,h));
+const genImage=(prompt,w,h)=>withLock('image',()=>genImageNow(prompt,w,h));
 async function genImageNow(prompt,w,h){
  const key=S.imgKey||S.apiKey;if(!key)throw new Error('Add your API key in Settings first.');
  if(S.imgType==='arliai'){
@@ -558,7 +579,8 @@ async function playerTurn(text,opts={}){
  if(!opts.hidden)pushMsg({k:'p',t:text});
  G.sugs=[];renderPlay();
  try{
-  const raw=await chat([{role:'system',content:sysPrompt()},{role:'user',content:turnPrompt(text)}]);
+  STATUS='Writing the scene…';
+  const raw=await chat([{role:'system',content:sysPrompt()},{role:'user',content:turnPrompt(text)}],{onText:liveUpdate});
   if(G===g){applyTurn(parseJSON(raw),raw,opts);G.turn++;await afterTurn();ok=true}
  }catch(e){if(G===g){G=snap;if(!opts.hidden&&VIEW==='play'){const i=$('#inp');if(i&&!i.value)i.value=text}}toast(e.message)}
  busy=false;
@@ -670,7 +692,7 @@ function renderPlay(){if(VIEW!=='play'||!G)return;
   else if(m.k==='d')h+=`<div class="m-d">${m.list.map(x=>x.who==='harmony'?`<span class="hm ${x.d>0?'up':'down'}">Harmony ${x.d>0?'+':''}${x.d}</span>`:`<span class="${x.d>0?'up':'down'}">${esc(cname(chr(x.who)||{name:x.who}))} ${x.d>0?'+':''}${x.d}</span>`).join('')}</div>`;
   else if(m.k==='i')h+=`<figure class="m-i" data-act="zoom" data-k="${esc(m.key)}">${URLS.has(m.key)?'':pendingImgs.has(m.key)?'Painting…':'Image unavailable'}<img data-img="${esc(m.key)}" ${URLS.get(m.key)?`src="${URLS.get(m.key)}"`:''} alt="Scene picture"></figure>`;
   if(m===lastAI&&!busy)h+=`<div class="tools"><button class="icon-btn sm" data-act="picture" aria-label="Picture this moment">${ic('image')}</button>${lastTurn&&G.turn>0?`<button class="icon-btn sm" data-act="regen" aria-label="Regenerate the last reply">${ic('redo')}</button>`:''}</div>`}
- if(busy)h+=`<div class="typing"><span class="dots"><i></i><i></i><i></i></span>Writing the scene…</div>`;
+ if(busy)h+=`<div id="live" style="display:contents"></div><div class="typing"><span class="dots"><i></i><i></i><i></i></span><span class="st">${esc(STATUS)}</span></div>`;
  else if(showSugs&&G.sugs.length)h+=`<div class="sugs">${G.sugs.map((s,i)=>`<div class="sug"><button class="pen" data-act="editsug" data-i="${i}" aria-label="Edit this suggestion">${ic('pen')}</button><button class="go" data-act="sug" data-i="${i}">${s.a?`<em>${esc(s.a)}</em> `:''}${s.l?'"'+esc(s.l)+'"':''}</button></div>`).join('')}</div>`;
  log.innerHTML=h;log.scrollTop=log.scrollHeight;
  $('.send').disabled=busy}
