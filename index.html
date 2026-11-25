@@ -712,14 +712,14 @@ function openSettings(){SHEET='settings';const o=(v,l,cur)=>`<option value="${v}
  <label>Provider<select id="s-preset">${o('arliai','ArliAI',S.textPreset)}${o('openrouter','OpenRouter',S.textPreset)}${o('venice','Venice',S.textPreset)}${o('custom','Custom (OpenAI-compatible)',S.textPreset)}</select></label>
  <label${S.textPreset==='custom'?'':' hidden'} id="s-base-l">Base URL<input id="s-base" value="${esc(S.baseUrl)}" placeholder="https://…/v1" autocomplete="off"></label>
  <label>API key<input id="s-key" type="password" value="${esc(S.apiKey)}" placeholder="Paste your key" autocomplete="off"></label>
- <label>Model<input id="s-model" list="dl-text" value="${esc(S.textModel)}" autocomplete="off"></label><datalist id="dl-text"></datalist>
+ <label>Model<input id="s-model" value="${esc(S.textModel)}" autocomplete="off" autocapitalize="off" spellcheck="false"></label><select id="s-model-pick" aria-label="Pick a story model" hidden></select>
  <div class="btn-row"><button class="btn ghost small" data-act="loadmodels">Load model list</button><button class="btn ghost small" data-act="testai">Test connection</button></div>
  <p class="muted">Your key is stored only on this device and is sent only to the provider you pick.</p></div>
  <div class="group"><h3>Images</h3>
  <label>Image service<select id="s-imgtype">${o('arliai','ArliAI',S.imgType)}${o('venice','Venice',S.imgType)}${o('openai','OpenAI-compatible',S.imgType)}${o('off','Off',S.imgType)}</select></label>
  <label${S.imgType==='openai'?'':' hidden'} id="s-ibase-l">Image base URL<input id="s-ibase" value="${esc(S.imgBase)}" placeholder="Blank uses the story AI's URL" autocomplete="off"></label>
  <label>Image API key<input id="s-ikey" type="password" value="${esc(S.imgKey)}" placeholder="Blank uses the story AI key" autocomplete="off"></label>
- <label>Image model<input id="s-imodel" list="dl-img" value="${esc(S.imgModel)}" autocomplete="off"></label><datalist id="dl-img"></datalist>
+ <label>Image model<input id="s-imodel" value="${esc(S.imgModel)}" autocomplete="off" autocapitalize="off" spellcheck="false"></label><select id="s-imodel-pick" aria-label="Pick an image model" hidden></select>
  <label>Art style<textarea id="s-style" rows="2">${esc(S.artStyle)}</textarea></label>
  <label class="check"><input type="checkbox" id="s-auto" ${S.autoImages?'checked':''}>Make room backgrounds, covers and portraits automatically (once each)</label></div>
  <div class="group"><h3>Narrator</h3><label>Extra instructions for the AI<textarea id="s-note" rows="3" placeholder="e.g. Write longer scenes. More banter.">${esc(S.authorNote)}</textarea></label></div>
@@ -729,7 +729,11 @@ function openSettings(){SHEET='settings';const o=(v,l,cur)=>`<option value="${v}
  bind('#s-base',el=>S.baseUrl=el.value.trim());bind('#s-key',el=>S.apiKey=el.value.trim());bind('#s-model',el=>S.textModel=el.value.trim());
  bind('#s-imgtype',el=>{S.imgType=el.value;$('#s-ibase-l').hidden=el.value!=='openai';if(IMG_DEF[el.value])$('#s-imodel').value=S.imgModel=IMG_DEF[el.value]});bind('#s-ibase',el=>S.imgBase=el.value.trim());bind('#s-ikey',el=>S.imgKey=el.value.trim());bind('#s-imodel',el=>S.imgModel=el.value.trim());
  bind('#s-style',el=>S.artStyle=el.value.trim()||DEF.artStyle);bind('#s-auto',el=>S.autoImages=el.checked);bind('#s-note',el=>S.authorNote=el.value.trim());
- $('#s-import').addEventListener('change',importBackup)}
+ $('#s-import').addEventListener('change',importBackup);
+ $('#s-model-pick').addEventListener('change',e=>{if(e.target.value){$('#s-model').value=S.textModel=e.target.value;saveSettings();toast('Story model set to '+S.textModel,true)}});
+ $('#s-imodel-pick').addEventListener('change',e=>{if(e.target.value){$('#s-imodel').value=S.imgModel=e.target.value;saveSettings();toast('Image model set to '+S.imgModel,true)}})}
+/* read the fields directly, in case a just-pasted value hasn't fired "change" yet */
+function syncSettings(){const v=id=>$(id)?.value?.trim();if(!$('#s-key'))return;S.apiKey=v('#s-key')||'';S.textModel=v('#s-model')||S.textModel;if(S.textPreset==='custom')S.baseUrl=v('#s-base')||S.baseUrl;S.imgKey=v('#s-ikey')||'';S.imgModel=v('#s-imodel')||S.imgModel;saveSettings()}
 
 /* ---------- create your own ---------- */
 function viewCreate(){VIEW='create';closeSheet();
@@ -831,10 +835,15 @@ const ACT={
  selchar:b=>{selChar=b.dataset.id;refreshSheet()},
  ctab:b=>{cTab=b.dataset.t;refreshSheet()},
  setpor:async b=>{const blob=await DB.get(b.dataset.k,'img');if(!blob)return;const k=imgKey('por',STORY.id,selChar);await DB.set(k,blob,'img');setURL(k,blob);paint(k);refreshSheet();toast('Portrait updated.',true)},
- async loadmodels(){try{const r1=await fetch(base()+'/models?type=text',{headers:S.apiKey?{Authorization:'Bearer '+S.apiKey}:{}});const d1=await r1.json();$('#dl-text').innerHTML=arr(d1.data).map(m=>`<option value="${esc(m.id)}">`).join('');
-  if(S.imgType==='venice'){const r2=await fetch('https://api.venice.ai/api/v1/models?type=image');const d2=await r2.json();$('#dl-img').innerHTML=arr(d2.data).map(m=>`<option value="${esc(m.id)}">`).join('')}
-  if(S.imgType==='arliai'){const r2=await fetch('https://api.arliai.com/v1/img-models',{headers:{Authorization:'Bearer '+(S.imgKey||S.apiKey)}});const d2=await r2.json();const list=Array.isArray(d2)?d2:arr(d2.data||d2.models);$('#dl-img').innerHTML=list.map(m=>typeof m==='string'?m:(m.id||m.name||m.model_name||'')).filter(Boolean).map(id=>`<option value="${esc(id)}">`).join('')}toast(`Loaded ${arr(d1.data).length} models. Tap a model field to pick one.`,true)}catch{toast('Could not load the model list.')}},
- async testai(b){b.disabled=true;b.textContent='Testing…';try{const t=await chat([{role:'user',content:'Reply with the single word: ready'}],{max:20,temp:0});toast('Connected. The AI said: '+t.slice(0,40),true)}catch(e){toast(e.message)}b.disabled=false;b.textContent='Test connection'},
+ async loadmodels(b){syncSettings();b.disabled=true;b.textContent='Loading…';const msg=[];let ok=true;
+  const get=async(url,key)=>{const r=await fetchT(url,{headers:key?{Authorization:'Bearer '+key}:{}},30000);if(!r.ok)throw new Error(await errText(r));try{return await r.json()}catch{throw new Error('the service sent an unreadable reply')}};
+  const ids=d=>{const l=Array.isArray(d)?d:arr(d?.data||d?.models||d?.items);return [...new Set(l.map(m=>typeof m==='string'?m:(m.id||m.name||m.model_name||m.sd_model_checkpoint||m.title||'')).filter(Boolean).map(String))].sort((a,c)=>a.localeCompare(c))};
+  const fill=(sel,list,cur)=>{sel.innerHTML=`<option value="">Pick from ${list.length} models…</option>`+list.map(id=>`<option value="${esc(id)}"${id===cur?' selected':''}>${esc(id)}</option>`).join('');sel.hidden=!list.length};
+  if(!S.apiKey){msg.push('Paste your API key first');ok=false}
+  else{try{const t=ids(await get(base()+'/models'+(/venice\.ai/.test(S.baseUrl)?'?type=text':''),S.apiKey));fill($('#s-model-pick'),t,S.textModel);msg.push(`${t.length} story models`);if(t.length&&!t.includes(S.textModel)){msg.push(`"${S.textModel}" isn't on the list, so pick one`);ok=false}}catch(e){msg.push('Story models: '+e.message);ok=false}
+   if(S.imgType!=='off'){try{const ik=S.imgKey||S.apiKey;const url=S.imgType==='arliai'?'https://api.arliai.com/v1/img-models':S.imgType==='venice'?'https://api.venice.ai/api/v1/models?type=image':(S.imgBase||S.baseUrl).replace(/\/+$/,'')+'/models';const t=ids(await get(url,ik));fill($('#s-imodel-pick'),t,S.imgModel);msg.push(`${t.length} image models`);if(t.length&&!t.includes(S.imgModel)){msg.push(`"${S.imgModel}" isn't on the image list, so pick one`);ok=false}}catch(e){msg.push('Image models: '+e.message);ok=false}}}
+  toast(msg.join(' · ')+(ok?' · Use the pickers under each model field.':''),ok);b.disabled=false;b.textContent='Load model list'},
+ async testai(b){syncSettings();b.disabled=true;b.textContent='Testing…';try{const t=await chat([{role:'user',content:'Reply with the single word: ready'}],{max:20,temp:0});toast('Connected. The AI said: '+t.slice(0,40),true)}catch(e){toast(e.message)}b.disabled=false;b.textContent='Test connection'},
  export:()=>exportBackup(),
  async clearimgs(b){if(armed!=='clr'){armed='clr';b.textContent='Tap again to delete every image';return}armed=null;await DB.clear('img');URLS.forEach(u=>URL.revokeObjectURL(u));URLS.clear();b.textContent='Images deleted';toast('All images deleted.',true)},
  async delstory(b){if(armed!=='del'){armed='del';b.textContent='Tap again to delete the story and its save';return}armed=null;const id=STORY.id;await DB.set('stories',arr(await DB.get('stories')).filter(s=>s.id!==id));await DB.del('save:'+id);await DB.del('endings:'+id);viewHome()},
