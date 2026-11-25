@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lit Windows</title>
+<meta name="theme-color" content="#0c1120">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lit Windows">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap">
+<style>
+/* Night dollhouse: a navy night where rooms glow lamp-amber when someone is home. Single dark theme by design. */
+:root{
+  --night:#0c1120; --night-2:#121a2e; --wall:#19223d; --wall-2:#222c4b;
+  --panel:rgba(17,24,42,.78); --panel-2:rgba(28,37,62,.82); --line:rgba(170,190,240,.14);
+  --ink:#eaedf6; --muted:#a1aac4; --dim:#6f7894;
+  --lamp:#f3b660; --lamp-hi:#ffd99c; --lamp-soft:rgba(243,182,96,.15);
+  --rose:#ef8aa0; --sage:#7cc6a4; --bad:#ef7676;
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Figtree",-apple-system,"Segoe UI",system-ui,sans-serif;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --sl:max(16px,env(safe-area-inset-left,0px)); --sr:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--night);color:var(--ink);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{background:radial-gradient(120% 60% at 50% 110%,rgba(243,182,96,.10),transparent 60%),var(--night)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:2px solid var(--lamp);outline-offset:2px}
+input,textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{resize:none}
+label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+[hidden]{display:none!important}
+.ic{width:20px;height:20px;flex:none}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+p{margin:0}
+em{font-style:italic;color:var(--muted)}
+
+.page{max-width:720px;margin:0 auto;padding:calc(var(--st) + 14px) var(--sr) calc(var(--sb) + 28px) var(--sl);display:grid;gap:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--lamp);color:#241606;font-weight:600;border-radius:999px;padding:13px 20px}
+.btn.ghost{background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:8px 14px;font-size:14px}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid rgba(239,118,118,.35)}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.icon-btn.sm{width:34px;height:34px}
+.icon-btn.sm .ic{width:18px;height:18px}
+.sec{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--body)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+
+/* house figure (fallback cover + brand mark) */
+.housefig{position:absolute;inset:auto 0 0 0;margin:0 auto;width:58%;max-width:260px;aspect-ratio:1/1.05;display:grid;grid-template-rows:38% 1fr;pointer-events:none}
+.housefig .rf{background:var(--wall-2);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.housefig .bd{background:var(--wall);display:grid;grid-template-columns:repeat(3,1fr);gap:9%;padding:10% 12%}
+.housefig .w{background:#0d1426;border-radius:3px}
+.housefig .w.on{background:radial-gradient(circle at 50% 40%,var(--lamp-hi),var(--lamp) 55%,#b77a2c);box-shadow:0 0 18px rgba(243,182,96,.55)}
+.has-img>.housefig{display:none}
+
+/* home */
+.home-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.brand{font-size:34px;line-height:1.05}
+.brand span{color:var(--lamp)}
+.sub{color:var(--muted);max-width:42ch;margin-top:6px}
+.notice{display:grid;gap:8px;padding:14px 16px;border-radius:var(--r,14px);background:var(--lamp-soft);border:1px solid rgba(243,182,96,.35)}
+.notice span{color:var(--muted);font-size:14px}
+.notice .btn{justify-self:start}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{display:grid;text-align:left;border-radius:16px;overflow:hidden;background:var(--panel-2);border:1px solid var(--line);min-width:0}
+.cover{position:relative;aspect-ratio:4/3;background:linear-gradient(180deg,#16203c,#0f1628 70%,#1b2a22);background-size:cover;background-position:center}
+.card .meta{display:grid;gap:6px;padding:14px}
+.card h3{font-size:20px}
+.card p{color:var(--muted);font-size:14px}
+.prog{font-size:13px;color:var(--lamp)}
+.card.create{place-content:center;justify-items:center;text-align:center;gap:8px;padding:28px 18px;border-style:dashed;background:transparent;min-height:200px}
+.card.create .ic{width:28px;height:28px;color:var(--lamp)}
+.card.create span{color:var(--muted);font-size:14px;max-width:30ch}
+
+/* story page */
+.hero{position:relative;height:min(62vh,520px);background:linear-gradient(180deg,#1a2442,#0f1628 75%);background-size:cover;background-position:center 30%}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,17,32,.35) 0,transparent 30%,rgba(12,17,32,.2) 55%,var(--night))}
+.hero .icon-btn{position:absolute;z-index:2;top:calc(var(--st) + 12px);left:var(--sl)}
+.story-v .page{margin-top:-90px;position:relative;z-index:1;padding-bottom:calc(var(--sb) + 110px)}
+.title{font-size:32px;line-height:1.08}
+.tagline{color:var(--lamp-hi);margin-top:4px}
+.syn{color:var(--ink);max-width:62ch}
+.goal{display:flex;gap:12px;padding:14px 16px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+.goal .ic{color:var(--lamp);margin-top:2px}
+.goal p{color:var(--muted);font-size:14px;margin-top:2px}
+.you-card{display:grid;gap:10px;padding:14px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+.you-card .row{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+.badge{justify-self:start;font-size:11px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:6px;background:var(--lamp-soft);color:var(--lamp)}
+.cast{display:grid;gap:12px}
+.cast-card{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:12px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line);align-items:start}
+.cast-card h3{font-size:18px}
+.age{font-family:var(--body);font-weight:500;font-size:14px;color:var(--muted)}
+.role{font-size:13px;color:var(--lamp)}
+.intro{font-size:14px;color:var(--muted);margin-top:4px}
+.por{width:96px;aspect-ratio:3/4;border-radius:10px;background:var(--wall) center/cover;display:grid;place-items:center;font:700 30px var(--display);color:var(--c,var(--lamp))}
+.por.has-img{color:transparent}
+.endings{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.endings li{padding:12px 14px;border-radius:12px;border:1px solid var(--line);font-size:14px;color:var(--muted)}
+.endings li b{display:block;color:var(--ink);font-family:var(--display);font-size:16px}
+.endings li.locked{border-style:dashed;color:var(--dim)}
+.cta-bar{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:10px;justify-content:center;padding:14px var(--sr) calc(var(--sb) + 14px) var(--sl);background:linear-gradient(180deg,transparent,var(--night) 35%)}
+.cta-bar .btn{flex:1;max-width:340px}
+
+/* play */
+.play{position:fixed;inset:0;display:flex;flex-direction:column}
+.bg{position:absolute;inset:0;z-index:-1;background:radial-gradient(80% 45% at 70% 20%,rgba(243,182,96,.08),transparent),linear-gradient(180deg,#141d36,var(--night));background-size:cover;background-position:center}
+.bg.has-img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,17,32,.62),rgba(12,17,32,.78) 45%,rgba(12,17,32,.94))}
+.top{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:10px;padding:calc(var(--st) + 8px) var(--sr) 6px var(--sl)}
+.clock{text-align:center;line-height:1.2}
+.clock b{font-family:var(--display);font-size:17px}
+.clock b i{font-style:normal;color:var(--lamp)}
+.clock span{display:block;font-size:12px;color:var(--muted)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px var(--sr) 6px var(--sl);scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
+.chip .ic{width:14px;height:14px}
+.chip.ev{border-color:rgba(243,182,96,.45);color:var(--lamp-hi)}
+.chip.ev.live{background:rgba(243,182,96,.18)}
+.chip.done{color:var(--sage);border-color:rgba(124,198,164,.4)}
+.chip b{font-weight:600}
+.rail{position:absolute;right:var(--sr);top:calc(var(--st) + 104px);z-index:3;display:grid;gap:8px}
+.rail .icon-btn{width:42px;height:42px}
+.log{flex:1;overflow-y:auto;padding:8px calc(var(--sr) + 50px) 12px var(--sl);display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
+.log>:first-child{margin-top:auto}
+.m-n{font-style:italic;color:#c9cfe0;max-width:60ch;font-size:15px;line-height:1.55}
+.m-n em{color:#c9cfe0}
+.m-c{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;max-width:62ch}
+.m-name{font-size:13px;font-weight:600;color:var(--c,var(--lamp));display:block;margin-bottom:3px}
+.bubble{background:var(--panel);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:10px 13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.bubble em{color:#b7bfd6}
+.m-p{align-self:flex-end;max-width:min(82%,52ch)}
+.m-p .bubble{background:rgba(243,182,96,.16);border-color:rgba(243,182,96,.35);border-radius:16px 4px 16px 16px}
+.m-p .bubble em{color:var(--lamp-hi)}
+.m-s{align-self:center;font-size:12.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:4px 12px;border-radius:999px;text-align:center;max-width:90%}
+.m-s.ev{color:var(--lamp-hi);border-color:rgba(243,182,96,.4)}
+.m-d{display:flex;flex-wrap:wrap;gap:6px;padding-left:44px}
+.m-d span{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.up{color:var(--rose)} .down{color:#8fa3d6} .m-d .hm.up{color:var(--sage)} .m-d .hm.down{color:var(--bad)}
+.m-i{margin:0;align-self:flex-start;width:min(78%,360px);border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--panel);aspect-ratio:3/4;display:grid;place-items:center;color:var(--muted);font-size:13px}
+.m-i img{width:100%;height:100%;object-fit:cover;display:block}
+.m-i img:not([src]){display:none}
+.tools{display:flex;gap:8px;padding-left:44px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--wall) center 20%/cover;display:grid;place-items:center;font:700 14px var(--display);color:var(--c,var(--lamp));border:1.5px solid var(--c,var(--line));flex:none}
+.av.has-img{color:transparent}
+.av.lg{width:54px;height:54px;font-size:20px}
+.typing{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.dots{display:inline-flex;gap:4px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--lamp);animation:bl 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.sugs{display:grid;gap:6px;margin-top:2px}
+.sug{display:grid;grid-template-columns:38px 1fr;gap:6px}
+.sug button{background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.sug .pen{display:grid;place-items:center;color:var(--muted)}
+.sug .pen .ic{width:16px;height:16px}
+.sug .go{text-align:left;padding:9px 12px;font-size:14px;line-height:1.4}
+.sug .go em{color:var(--lamp-hi)}
+.composer{margin:0 var(--sr) calc(var(--sb) + 10px) var(--sl);background:var(--panel-2);border:1px solid var(--line);border-radius:18px;padding:8px 8px 8px 12px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.composer textarea{background:transparent;border:0;padding:6px 2px;max-height:140px;line-height:1.4}
+.composer textarea:focus-visible{outline:none}
+.c-row{display:flex;align-items:center;gap:6px}
+.c-row .hint{flex:1;font-size:12px;color:var(--dim);padding-left:4px}
+.send{width:40px;height:40px;border-radius:50%;background:var(--lamp);color:#241606;display:grid;place-items:center}
+
+/* sheets */
+.sheet-wrap{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end}
+.sheet-bg{position:absolute;inset:0;background:rgba(5,8,16,.6)}
+.sheet{position:relative;max-height:90vh;max-height:90dvh;display:flex;flex-direction:column;background:#10172a;border-top:1px solid var(--line);border-radius:22px 22px 0 0;width:100%;max-width:760px;margin:0 auto;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(24px)}}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;padding:16px var(--sr) 8px var(--sl)}
+.sheet-h b{font-family:var(--display);font-size:20px}
+.sheet-body{overflow-y:auto;padding:6px var(--sr) calc(var(--sb) + 22px) var(--sl);display:grid;gap:14px;align-content:start}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--ink)}
+.check input{width:20px;height:20px}
+.muted{color:var(--muted);font-size:13px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+.group{display:grid;gap:12px;padding:14px;border:1px solid var(--line);border-radius:14px}
+.group>h3{font-size:16px}
+
+/* map */
+.map{display:grid;gap:0;padding:4px 0}
+.roof{background:var(--wall-2);clip-path:polygon(50% 0,100% 100%,0 100%);height:118px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px}
+.roof .room{width:44%;min-height:62px}
+.floor{background:var(--wall);padding:8px;display:grid;gap:6px;border-top:4px solid #0e1528}
+.floor .fl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.rooms{display:grid;gap:6px}
+.floor.outside{background:linear-gradient(180deg,#14261f,#0f1b17);border-top:4px solid #0b1411;border-radius:0 0 14px 14px}
+.room{position:relative;min-height:84px;border-radius:8px;background:#0d1426;border:1px solid rgba(170,190,240,.08);padding:7px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:4px;overflow:hidden;min-width:0}
+.room .rn{font-size:12px;font-weight:600;color:var(--dim);line-height:1.2}
+.room.lit{background:radial-gradient(120% 90% at 50% 0,rgba(255,217,156,.42),rgba(243,182,96,.12) 60%,rgba(243,182,96,.04)),#2a2214;border-color:rgba(243,182,96,.35)}
+.room.lit .rn{color:var(--lamp-hi)}
+.room.here{outline:2px solid var(--lamp);outline-offset:-2px}
+.room .occ{display:flex;flex-wrap:wrap;gap:3px}
+.room .occ .av{width:24px;height:24px;font-size:11px}
+.room .you{font-size:10px;font-weight:700;letter-spacing:.08em;color:#241606;background:var(--lamp);padding:1px 6px;border-radius:5px;align-self:flex-start}
+.room .evm{position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--lamp);box-shadow:0 0 0 0 rgba(243,182,96,.7);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 9px rgba(243,182,96,0)}100%{box-shadow:0 0 0 0 rgba(243,182,96,0)}}
+.room .hintx{font-size:10.5px;color:var(--lamp-hi);font-style:italic;line-height:1.25}
+.outstrip{margin-top:10px;font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.roompanel{display:grid;gap:10px;padding:14px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+.roompanel h3{font-size:18px}
+
+/* characters */
+.car{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 6px;scrollbar-width:none}
+.car button{border-radius:50%;padding:3px;border:2px solid transparent}
+.car button.on{border-color:var(--lamp)}
+.ccard{display:grid;gap:12px;padding:14px;border-radius:16px;background:var(--panel-2);border:1px solid var(--line)}
+.ccard-top{display:grid;grid-template-columns:1fr 92px;gap:12px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pill{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.aff{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.aff b{font-family:var(--display);font-size:20px;color:var(--rose)}
+.aff small{font-size:12px;color:var(--dim);font-family:var(--body);font-weight:400}
+.bar{height:6px;border-radius:9px;background:rgba(170,190,240,.12);overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#c86a83,var(--rose));border-radius:9px}
+.bar.hm i{background:linear-gradient(90deg,#4f9a7a,var(--sage))}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:12px;background:var(--panel-2)}
+.tabs button{padding:8px 4px;border-radius:9px;font-size:13.5px;color:var(--muted)}
+.tabs button.on{background:var(--ink);color:var(--night);font-weight:600}
+.th{display:grid;gap:4px;padding:12px 0;border-bottom:1px solid var(--line)}
+.th-h{display:flex;gap:10px;align-items:baseline;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.th-h b{font-size:15px}
+.th-h .r{margin-left:auto}
+.grid-img{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.grid-img button{aspect-ratio:3/4;border-radius:10px;background:var(--wall) center/cover;border:1px solid var(--line);position:relative}
+.grid-img button span{position:absolute;left:6px;bottom:6px;font-size:11px;background:rgba(12,17,32,.7);padding:1px 6px;border-radius:5px}
+.empty{color:var(--muted);font-size:14px;padding:12px 0}
+.diary{padding:12px 0;border-bottom:1px solid var(--line);display:grid;gap:4px}
+.diary b{font-size:12px;color:var(--dim);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.diary p{font-style:italic;color:#d6dbea}
+
+/* overlays */
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 90px);z-index:40;max-width:min(92vw,440px);background:#2a1d22;border:1px solid rgba(239,118,118,.4);color:var(--ink);padding:10px 14px;border-radius:12px;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#toast.ok{background:#16261f;border-color:rgba(124,198,164,.4)}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(5,8,16,.94);display:grid;place-items:center;padding:calc(var(--st) + 10px) var(--sr) calc(var(--sb) + 10px) var(--sl)}
+.lightbox img{max-width:100%;max-height:100%;border-radius:12px}
+.busy-cover{position:fixed;inset:0;z-index:45;background:rgba(8,12,22,.86);display:grid;place-content:center;justify-items:center;gap:14px;text-align:center;padding:0 var(--sr) 0 var(--sl)}
+.busy-cover p{color:var(--muted);max-width:34ch}
+.ending{position:fixed;inset:0;z-index:30;overflow-y:auto;background:radial-gradient(90% 50% at 50% 0,rgba(243,182,96,.18),transparent),var(--night)}
+.ending .page{padding-top:calc(var(--st) + 40px)}
+.ending .kicker{color:var(--lamp);font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+.ending h1{font-size:40px;line-height:1.05}
+.ending .epi{display:grid;gap:12px;font-size:16px;line-height:1.65;max-width:62ch}
+.stats{display:grid;gap:10px}
+.stat{display:grid;grid-template-columns:110px 1fr 38px;gap:10px;align-items:center;font-size:14px;font-variant-numeric:tabular-nums}
+@media (min-width:700px){.housefig{width:44%}.brand{font-size:42px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet" class="sheet-wrap" hidden></div>
+<div id="toast" role="status" hidden></div>
+<script>
+'use strict';
+/* ---------- utilities ---------- */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>esc(s).replace(/\*([^*\n]+)\*/g,'<em>$1</em>').replace(/\n/g,'<br>');
+const uid=()=>Math.random().toString(36).slice(2,10);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const arr=v=>Array.isArray(v)?v:[];
+const obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
+const app=$('#app'), sheet=$('#sheet');
+const I={
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.2 6.2l2.1 2.1M17.7 15.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 17.8l2.1-2.1M17.7 8.3l2.1-2.1"/>',
+ house:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+ people:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/>',
+ image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+ redo:'<path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/>',
+ pen:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>',
+ send:'<path d="M5 12h13"/><path d="M12 5l7 7-7 7"/>',
+ star:'<path d="M12 4v16M5 8l14 8M19 8L5 16"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ list:'<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+ clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+ flag:'<path d="M5 21V4h11l-2 4 2 4H5"/>',
+ spark:'<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/>',
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+};
+const ic=n=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+let toastT;
+function toast(msg,ok){const t=$('#toast');t.textContent=msg;t.className=ok?'ok':'';t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,ok?2200:5200)}
+
+/* ---------- storage (IndexedDB) ---------- */
+const DB=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('litwindows',1);r.onupgradeneeded=()=>{r.result.createObjectStore('kv');r.result.createObjectStore('img')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+ const op=async(store,mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction(store,mode);const q=fn(t.objectStore(store));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})};
+ return{get:(k,s='kv')=>op(s,'readonly',x=>x.get(k)),set:(k,v,s='kv')=>op(s,'readwrite',x=>x.put(v,k)),del:(k,s='kv')=>op(s,'readwrite',x=>x.delete(k)),keys:(s='kv')=>op(s,'readonly',x=>x.getAllKeys()),clear:s=>op(s,'readwrite',x=>x.clear())}})();
+
+/* ---------- settings ---------- */
+const PRESETS={venice:'https://api.venice.ai/api/v1',openrouter:'https://openrouter.ai/api/v1'};
+const DEF={textPreset:'venice',baseUrl:PRESETS.venice,apiKey:'',textModel:'zai-org-glm-4.6',imgType:'venice',imgBase:'',imgKey:'',imgModel:'venice-sd35',artStyle:'semi-realistic anime illustration, soft cinematic lighting, rich detail, warm color grading',autoImages:true,authorNote:''};
+let S={...DEF};
+const saveSettings=()=>DB.set('settings',S);
+
+/* ---------- built-in story ---------- */
+const ALDER={
+ id:'alder',builtin:true,title:'The House on Alder Lane',tagline:'One spare room. Four housemates. Seven days to find your place.',
+ tags:['Modern','Romance','Drama','Shared house'],
+ synopsis:'You needed a room fast, and Jenna Hale\'s big house on Alder Lane had the last one in your budget. Now you share a kitchen, a bathroom and a lot of opinions with Jenna and her three tenants, and the house has a secret of its own.',
+ goal:'Get close to the women of Alder Lane, keep the peace, and decide who you end up with: one of them, several, or nobody.',
+ setting:'14 Alder Lane, a big old two-story house in a college town, with creaky stairs, a wraparound porch, a backyard pool and a garage turned into a home gym.',
+ cover:'exterior of a large two-story suburban house at dusk, wraparound porch, warm glowing windows, backyard pool lights, quiet college town street',
+ player:{name:'Alex',pronouns:'he/him',bio:'21, just transferred to the local university mid-year and needed a room fast. Easygoing, a decent cook, terrible at saying no.'},
+ player_room:'your_room',
+ rooms:[
+  {id:'attic',name:'Attic',floor:'attic',desc:'Slanted ceiling, string lights, a sagging thrifted couch and a round window over the street. Everyone\'s secret hideout.'},
+  {id:'your_room',name:'Your room',floor:'upstairs',desc:'The small back bedroom with a creaky bed, a desk, and a window over the pool.'},
+  {id:'sienna_room',name:'Sienna\'s room',floor:'upstairs',desc:'Medals on a hook, running shoes everywhere, a mini fridge full of sports drinks.'},
+  {id:'iris_room',name:'Iris\'s room',floor:'upstairs',desc:'Pastel and spotless, with a ring light, a yoga mat and far too many throw pillows.'},
+  {id:'tatum_room',name:'Tatum\'s room',floor:'upstairs',desc:'Minimal and dark: two monitors, blackout curtains and a shelf of old DVDs.'},
+  {id:'bathroom',name:'Bathroom',floor:'upstairs',desc:'The one shared upstairs bathroom, with a schedule taped to the mirror that nobody follows.'},
+  {id:'porch',name:'Front porch',floor:'ground',desc:'A wraparound porch with a swing seat and a view of the quiet street.'},
+  {id:'living',name:'Living room',floor:'ground',desc:'A big sectional couch, a TV nobody agrees on, and a fireplace with photos on the mantel.'},
+  {id:'kitchen',name:'Kitchen',floor:'ground',desc:'Warm, cluttered and always smelling like something Jenna is baking. The real center of the house.'},
+  {id:'jenna_room',name:'Jenna\'s room',floor:'ground',desc:'The main bedroom off the hall: soft lamps, a reading chair, and a door she usually keeps closed.'},
+  {id:'backyard',name:'Backyard & pool',floor:'outside',desc:'Patio lights, a fire pit, loungers and a pool that glows at night.'},
+  {id:'garage',name:'Garage gym',floor:'outside',desc:'Weights, a squat rack, a punching bag and a speaker that only plays one playlist.'},
+ ],
+ characters:[
+  {id:'jenna',name:'Jenna Hale',age:38,gender:'woman',role:'Owns the house',color:'#f0a07e',affection:30,
+   look:'38-year-old woman, curvy figure, long wavy brunette hair, warm brown eyes, fair skin, confident warm smile',
+   outfit:'a fitted sweater and jeans with a flour-dusted apron',
+   personality:'Owns the house and runs a small catering business out of the kitchen. Warm, teasing and quick to feed anyone who looks tired, but lonely since her divorce two years ago. Secret: she is three months behind on the mortgage and the bank has sent a final notice.',
+   intro:'Owns the house and runs a catering business from the kitchen. Generous and teasing, and lonelier since her divorce than she lets on.',
+   schedule:{morning:'kitchen',afternoon:'backyard',evening:'living',night:'jenna_room'}},
+  {id:'sienna',name:'Sienna Addison',age:19,gender:'woman',role:'Housemate',color:'#86b6ff',affection:20,
+   look:'19-year-old adult woman, slim athletic runner build, brunette hair in a high ponytail, fair skin, playful competitive grin',
+   outfit:'running shorts and a university track hoodie',
+   personality:'College sophomore on the track team. Competitive, blunt and teasing; turns everything into a bet and hates losing. Secret: her times have slipped and she is terrified of losing her scholarship.',
+   intro:'Sophomore sprinter who turns everything into a bet. Loud, blunt, and never the first to back down.',
+   schedule:{morning:'garage',afternoon:'out',evening:'kitchen',night:'sienna_room'}},
+  {id:'iris',name:'Iris Jade',age:18,gender:'woman',role:'Housemate',color:'#f4a9cb',affection:25,
+   look:'18-year-old adult woman, slender toned pilates build, long sleek blonde hair, fair skin, bright stylish look',
+   outfit:'a matching pastel athleisure set',
+   personality:'College freshman living away from home for the first time. Pilates, smoothies and a phone that is always filming; bubbly, image-conscious and quick to flirt. Secret: she is homesick and lonelier than her feed suggests.',
+   intro:'Freshman away from home for the first time. Pilates every morning, always filming, and the friendliest person in the house.',
+   schedule:{morning:'living',afternoon:'out',evening:'iris_room',night:'iris_room'}},
+  {id:'tatum',name:'Tatum Marlow',age:25,gender:'woman',role:'Housemate',color:'#b9a6ff',affection:15,
+   look:'25-year-old woman, athletic build, sleek jet-black hair, fair skin, sharp confident expression',
+   outfit:'a tailored blazer over a black top and slim trousers',
+   personality:'Junior analyst at a consulting firm working brutal hours. Dry, sharp and guarded; runs at dawn, lifts at night, and does not do feelings. Soft spot: old movies and the porch swing after midnight.',
+   intro:'Junior analyst who works brutal hours. Dry, guarded and hard to impress. Usually on the porch swing after midnight.',
+   schedule:{morning:'porch',afternoon:'out',evening:'garage',night:'tatum_room'}},
+ ],
+ events:[
+  {day:1,title:'House Meeting',room:'living',start:'19:00',end:'23:00',cast:['jenna','sienna','iris','tatum'],desc:'Jenna calls everyone to the living room to welcome the new tenant and go over house rules. Sienna wants to bet on how long the new guy lasts, Iris wants a group photo, and Tatum wants it to be over.',objective:'Meet everyone properly at the house meeting.'},
+  {day:2,title:'The Chore Wheel',room:'kitchen',start:'07:00',end:'11:00',cast:['jenna','sienna','iris'],desc:'Dishes have piled up and Sienna and Iris are loudly blaming each other. Jenna asks the player to help draw up a new chore wheel before it turns into a war.',objective:'Settle the chore fight.'},
+  {day:3,title:'Bad Race',room:'garage',start:'18:00',end:'23:00',cast:['sienna'],desc:'Sienna lost her time trial today and is taking it out on the punching bag in the garage. She says she is fine. She is not.',objective:'Help Sienna through her worst night of the season.'},
+  {day:4,title:'After Midnight',room:'porch',start:'23:00',end:'26:00',cast:['tatum'],desc:'Tatum was torn apart by her manager in front of a client. She is alone on the porch swing with a drink and an old movie on her phone.',objective:'Get Tatum to open up.'},
+  {day:5,title:'Homesick',room:'iris_room',start:'18:00',end:'23:00',cast:['iris'],desc:'A video call with Iris\'s parents went badly. Her door is shut, she is crying, and her suitcase is open on the bed.',objective:'Help Iris decide whether to stay.'},
+  {day:6,title:'The Letter',room:'kitchen',start:'21:00',end:'25:00',cast:['jenna'],desc:'A bank envelope marked FINAL NOTICE lies open on the kitchen counter, and Jenna walks in on the player reading it.',objective:'Learn Jenna\'s secret and decide how to help.'},
+  {day:7,title:'The House Party',room:'backyard',start:'19:00',end:'26:00',cast:['jenna','sienna','iris','tatum'],final:true,desc:'The housemates throw a big backyard party, partly to raise money for the mortgage and partly because everyone needs it. Everyone is dressed up, everyone has had a drink, and everyone wants a moment alone with the player.',objective:'Make it through the party. Who you spend tonight with decides how your week ends.'},
+ ],
+ opening:{room:'porch',time:'16:30',beats:[
+  {who:'narrator',text:'The cab pulls away and leaves you on the curb at 14 Alder Lane: a tall, slightly crooked house with a wraparound porch, a basketball hoop with no net, and windows catching the low sun.'},
+  {who:'narrator',text:'Music thumps from somewhere upstairs. Before you reach the steps, the screen door bangs open.'},
+  {who:'jenna',text:'*She wipes her hands on a flour-dusted apron and grins down at you.* You must be {name}. I\'m Jenna. Welcome to the madhouse. Come in before the girls decide to haze you.'},
+ ],suggestions:[
+  {action:'Shake her hand',line:'Thanks for taking me on so last minute.'},
+  {action:'Glance up at the music',line:'Madhouse, huh? How many of you live here?'},
+  {action:'Grin back',line:'Nobody told me the landlady was the welcoming committee.'},
+ ]},
+ endings:{
+  group:{title:'The Whole House',desc:'You won over three or more of them without tearing the house apart, and everyone chose a shared life together, with you at its center.'},
+  one:{title:'One Heart',desc:'You fell for one of them, and they fell for you. The others made their peace with it.'},
+  found:{title:'Found Family',desc:'No grand romance, but the house is saved and everyone in it is family now.'},
+  out:{title:'Moving Out',desc:'The drama won. You pack your bags and leave Alder Lane behind.'},
+ },
+ rules:'Jealousy, broken promises and public favoritism lower House Harmony; honesty, fairness and group moments raise it.',
+};
+const END_KEYS=['group','one','found','out'];
+const PALETTE=['#f0a07e','#86b6ff','#f4a9cb','#b9a6ff','#7cc6a4','#f3d36b'];
+
+/* ---------- game helpers ---------- */
+let STORY=null, G=null, VIEW='home', busy=false, lastTurn=null, showSugs=true, URLS=new Map(), pendingImgs=new Set();
+const WEEK=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const toMin=t=>{const m=String(t||'').match(/(\d{1,2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):16*60};
+const clock=m=>{const h=Math.floor(m/60)%24,mm=m%60;return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0')};
+const partOf=m=>{const h=Math.floor(m/60)%24;return h>=6&&h<12?'morning':h>=12&&h<18?'afternoon':h>=18&&h<23?'evening':'night'};
+const pkey=()=>G.day+'-'+partOf(G.min)+'-'+(G.min>=1440?1:0);
+const chr=id=>STORY.characters.find(c=>c.id===id);
+const findChar=w=>{w=String(w||'').toLowerCase().trim();if(!w)return null;return STORY.characters.find(c=>c.id===w)||STORY.characters.find(c=>c.name.toLowerCase()===w||c.name.toLowerCase().split(' ')[0]===w.split(' ')[0])};
+const room=id=>STORY.rooms.find(r=>r.id===id);
+const roomName=id=>id==='out'?'Out of the house':(room(id)?.name||id);
+const cname=c=>c.name.split(' ')[0];
+const dayLabel=()=>`Day ${G.day} · ${WEEK[(G.day-1)%7]}`;
+const todaysEvent=()=>STORY.events.find(e=>e.day===G.day);
+const evEnd=e=>{const s=toMin(e.start);let en=toMin(e.end);if(en<=s)en+=1440;return en};
+function evState(e){if(!e)return null;const st=G.ev[e.day];if(st)return st;if(G.min<toMin(e.start))return 'upcoming';if(G.min<=evEnd(e))return 'active';return 'late'}
+function charRoom(c){const ch=G.chars[c.id];if(ch.ov&&ch.ov.pk===pkey())return ch.ov.room;const e=todaysEvent();if(e&&evState(e)==='active'&&arr(e.cast).includes(c.id))return e.room;return c.schedule[partOf(G.min)]||'out'}
+const present=()=>STORY.characters.filter(c=>charRoom(c)===G.room);
+const outfitOf=c=>G?.chars[c.id]?.outfit||c.outfit||'casual clothes';
+const imgKey=(...p)=>p.join(':');
+function pushMsg(m){m.id=uid();G.msgs.push(m);return m}
+
+/* ---------- AI ---------- */
+const hdr=k=>({'Content-Type':'application/json','Authorization':'Bearer '+k});
+async function fetchT(url,opt,ms=120000){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{...opt,signal:c.signal})}catch(e){throw new Error(e.name==='AbortError'?'The AI took too long to answer. Try again.':'Could not reach the AI service. Check your connection.')}finally{clearTimeout(t)}}
+async function errText(r){let b='';try{b=await r.text();const j=JSON.parse(b);b=j.error?.message||j.error||j.message||b}catch{}
+ const m={401:'Your API key was rejected. Check it in Settings.',402:'Your AI account is out of credits.',429:'Too many requests. Wait a few seconds and try again.'}[r.status];
+ return m||`AI error ${r.status}: ${String(b).slice(0,160)}`}
+const base=()=>S.baseUrl.replace(/\/+$/,'');
+async function chat(messages,{max=1600,temp=0.9}={}){
+ if(!S.apiKey)throw new Error('Add your API key in Settings first.');
+ const body={model:S.textModel,messages,temperature:temp,max_tokens:max};
+ if(/venice\.ai/.test(S.baseUrl))body.venice_parameters={include_venice_system_prompt:false,disable_thinking:true};
+ const r=await fetchT(base()+'/chat/completions',{method:'POST',headers:hdr(S.apiKey),body:JSON.stringify(body)},150000);
+ if(!r.ok)throw new Error(await errText(r));
+ const d=await r.json();return String(d.choices?.[0]?.message?.content||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim()}
+function fixCtl(s){let o='',q=false,e=false;for(const ch of s){if(q){if(e){e=false;o+=ch;continue}if(ch==='\\'){e=true;o+=ch;continue}if(ch==='"'){q=false;o+=ch;continue}if(ch==='\n'){o+='\\n';continue}if(ch==='\r')continue;if(ch==='\t'){o+='\\t';continue}o+=ch}else{if(ch==='"')q=true;o+=ch}}return o}
+function parseJSON(raw){let t=String(raw||'');const f=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(f)t=f[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a<0||b<=a)return null;let s=t.slice(a,b+1);
+ for(const fx of [x=>x,fixCtl,x=>fixCtl(x).replace(/,\s*([}\]])/g,'$1')]){try{return JSON.parse(fx(s))}catch{}}return null}
+function salvage(raw){const out=[];const re=/"who"\s*:\s*"([^"]*)"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"/g;let m;while((m=re.exec(raw)))out.push({who:m[1],text:m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"')});
+ if(out.length)return out;const plain=String(raw).replace(/```[\s\S]*?```/g,'').replace(/[{}[\]]/g,'').trim();return plain?[{who:'narrator',text:plain.slice(0,1500)}]:[]}
+
+const NEG='child, kid, minor, underage, childlike, young-looking, school uniform, deformed, extra fingers, extra limbs, blurry, lowres, text, watermark, logo';
+function b64Blob(b,type){const bin=atob(b.replace(/^data:[^,]+,/,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type})}
+async function genImage(prompt,w,h){
+ const key=S.imgKey||S.apiKey;if(!key)throw new Error('Add your API key in Settings first.');
+ if(S.imgType==='venice'){
+  const r=await fetchT('https://api.venice.ai/api/v1/image/generate',{method:'POST',headers:hdr(key),body:JSON.stringify({model:S.imgModel,prompt:prompt.slice(0,1450),negative_prompt:NEG,width:w,height:h,format:'webp',safe_mode:false,hide_watermark:true,return_binary:false})},180000);
+  if(!r.ok)throw new Error(await errText(r));const d=await r.json();const b=d.images?.[0];if(!b)throw new Error('The image service returned nothing.');return b64Blob(b,'image/webp')}
+ const r=await fetchT((S.imgBase||S.baseUrl).replace(/\/+$/,'')+'/images/generations',{method:'POST',headers:hdr(key),body:JSON.stringify({model:S.imgModel,prompt:prompt.slice(0,3800),n:1,size:`${w}x${h}`,response_format:'b64_json'})},180000);
+ if(!r.ok)throw new Error(await errText(r));const d=await r.json();const it=d.data?.[0];
+ if(it?.b64_json)return b64Blob(it.b64_json,'image/png');if(it?.url){const x=await fetch(it.url);return await x.blob()}throw new Error('The image service returned nothing.')}
+
+/* ---------- images: cache + queue ---------- */
+function setURL(k,blob){if(URLS.has(k))URL.revokeObjectURL(URLS.get(k));URLS.set(k,URL.createObjectURL(blob))}
+async function preload(sid){const keys=await DB.keys('img');for(const k of keys){if(String(k).split(':')[1]!==sid||URLS.has(k))continue;const b=await DB.get(k,'img');if(b)setURL(k,b)}}
+const imgAttr=k=>{const u=URLS.get(k);return `data-img="${esc(k)}"`+(u?` style="background-image:url(${u})"`:'')};
+const hasImg=k=>URLS.has(k)?' has-img':'';
+function paint(k){const u=URLS.get(k);$$(`[data-img="${CSS.escape(k)}"]`).forEach(el=>{if(!u)return;if(el.tagName==='IMG')el.src=u;else{el.style.backgroundImage=`url(${u})`;el.classList.add('has-img')}const f=el.closest('.m-i');if(f)f.firstChild&&f.firstChild.nodeType===3&&(f.firstChild.textContent='')})}
+const jobs=[];let running=false,imgErr=0;
+function queueImg(k,prompt,w,h,force){if(S.imgType==='off')return;if(!force&&!S.autoImages)return;if(!(S.imgKey||S.apiKey))return;if(URLS.has(k)||pendingImgs.has(k))return;pendingImgs.add(k);jobs.push({k,prompt,w,h});runJobs()}
+async function runJobs(){if(running)return;running=true;while(jobs.length){const j=jobs.shift();try{const b=await genImage(j.prompt,j.w,j.h);await DB.set(j.k,b,'img');setURL(j.k,b);imgErr=0}catch(e){if(++imgErr<=2)toast('Image failed: '+e.message);$$(`[data-img="${CSS.escape(j.k)}"]`).forEach(el=>{const f=el.closest('.m-i');if(f)f.firstChild&&f.firstChild.nodeType===3&&(f.firstChild.textContent='Image failed. Tap the picture button to try again.')})}pendingImgs.delete(j.k);paint(j.k)}running=false}
+const gword=c=>c.gender==='man'?'an adult man':c.gender==='person'?'an adult':'an adult woman';
+function portraitPrompt(c,outfit){const home=room(c.schedule?.night)||room(c.schedule?.evening);return `${S.artStyle}. Character portrait of ${c.name}, ${gword(c)} aged ${c.age}: ${c.look}. Wearing ${outfit||c.outfit||'casual clothes'}. ${home?home.name+' background':'Indoor background'}, upper body, looking at the viewer, natural pose.`}
+function roomPrompt(r,s){const ext=r.floor==='outside';return `${S.artStyle}. ${s.setting} ${ext?'Exterior':'Interior'}: ${r.name}. ${r.desc} No people. Wide establishing shot, vertical composition, cozy atmosphere.`}
+const queueCover=s=>queueImg(imgKey('cover',s.id),`${S.artStyle}. ${s.cover||s.setting}. No people, establishing shot.`,1024,768);
+const queuePortraits=s=>s.characters.forEach(c=>queueImg(imgKey('por',s.id,c.id),portraitPrompt(c),768,1024));
+const queueRoom=()=>{const r=room(G.room);if(r)queueImg(imgKey('room',STORY.id,r.id),roomPrompt(r,STORY),704,1280)};
+
+/* ---------- stories ---------- */
+async function allStories(){return [ALDER,...arr(await DB.get('stories'))]}
+async function getStory(id){return (await allStories()).find(s=>s.id===id)}
+function houseFig(seed){let h=0;for(const ch of seed)h=(h*31+ch.charCodeAt(0))>>>0;let w='';for(let i=0;i<9;i++)w+=`<span class="w${(h>>i)&1||i===4?' on':''}"></span>`;return `<div class="housefig" aria-hidden="true"><div class="rf"></div><div class="bd">${w}</div></div>`}
+
+/* ---------- prompts ---------- */
+function sysPrompt(){const s=STORY;
+ return `You are the narrator and game master of "${s.title}", an interactive story game. You voice every character except the player, and you write the narration.
+
+PREMISE: ${s.synopsis}
+SETTING: ${s.setting}
+PLAYER: ${G.player.name} (${G.player.pronouns}). ${G.player.bio}
+CHARACTERS (every character is an adult aged 18 or older; never describe anyone as underage or childlike):
+${s.characters.map(c=>`- ${c.name} [id: ${c.id}], ${c.age}, ${c.role}. ${c.personality}`).join('\n')}
+ROOMS (ids): ${s.rooms.map(r=>`${r.id} (${r.name})`).join(', ')}; use "out" for anyone away from the house.
+
+HOW TO WRITE
+- Second person for the player ("you"), present tense. Vivid but brisk: 2-6 beats per reply.
+- A beat is narration ({"who":"narrator"}, 1-3 sentences) or one character's turn ({"who":"<their id>"}): actions in *asterisks*, then what they say.
+- Only characters in the player's room can talk or act on screen. Characters may come and go; report it in "moves".
+- Never speak, act or decide feelings for the player. End on a moment that invites a response.
+- Continuity matters: treat SUMMARY and MEMORY as true. Keep track of where everyone is, what they wear and what already happened.
+- Characters have their own wants, moods and schedules. They can disagree, tease, refuse or surprise.
+- Relationships are open: the player may pursue one person, several, or nobody. Others notice. Juggling people carelessly or dishonestly causes jealousy and lowers House Harmony; honesty and care can lead characters to accept a shared relationship over time.
+- Affection is earned: usually -3 to +3 per turn, only for characters who saw or were affected by what happened. Each change needs a one-sentence inner thought in that character's voice.
+${s.rules?'- '+s.rules+'\n':''}${S.authorNote?'AUTHOR NOTE: '+S.authorNote+'\n':''}
+REPLY FORMAT: only one JSON object, no other text:
+{"beats":[{"who":"narrator","text":"..."},{"who":"<character id>","text":"*action* words"}],
+"affection":[{"who":"<id>","delta":2,"thought":"inner thought"}],
+"mood":{"<id>":"one or two words"},
+"outfit":{"<id>":"what they are wearing now, only if it changed"},
+"harmony":0,
+"minutes":10,
+"moves":{"<id>":"<room id or out>"},
+"player_room":null,
+"elsewhere":{"room":"<room id>","text":"short hint of what is happening there right now"},
+"event_done":false,
+"memory":["new lasting fact worth remembering"],
+"suggestions":[{"action":"short action","line":"what the player says"},{"action":"...","line":"..."},{"action":"...","line":"..."}]}
+Use empty arrays, empty objects or null when nothing applies. "harmony" is the change to House Harmony (-10 to +10). "minutes" is how much time this exchange took (5-60). Give 3 distinct suggestions for the player's next move: one bold, one kind, one curious or playful.`}
+function transcript(n=26){const nm=G.player.name;return G.msgs.filter(m=>m.k==='n'||m.k==='c'||m.k==='p'||m.k==='s').slice(-n).map(m=>m.k==='n'?'Narrator: '+m.t:m.k==='c'?(chr(m.who)?.name||m.who)+': '+m.t:m.k==='p'?nm+': '+m.t:'('+m.t+')').join('\n')}
+function eventInfo(){const e=todaysEvent();if(!e)return 'No event today.';const st=evState(e);
+ if(st==='active')return `TODAY'S EVENT (active until ${clock(evEnd(e))}): "${e.title}" in ${roomName(e.room)}. ${e.desc} Objective: ${e.objective} ${G.room===e.room?'The player is there: play the event out.':'The player is not there yet; characters can hint at it or come find them.'} Set "event_done": true once the objective is resolved.`;
+ if(st==='upcoming')return `TODAY'S EVENT (later, from ${e.start}): "${e.title}" in ${roomName(e.room)}. Characters may set it up or mention it, but do not start it yet.`;
+ return `Today's event "${e.title}" is ${st==='done'?'finished':'over (the player missed it)'}.`}
+function turnPrompt(action){const here=present(),away=STORY.characters.filter(c=>!here.includes(c)),r=room(G.room);
+ return `STATE
+${dayLabel()}, ${clock(G.min)} (${partOf(G.min)}). ${G.player.name} is in: ${roomName(G.room)}${r?' ('+r.desc+')':''}.
+With ${G.player.name}: ${here.length?here.map(c=>`${c.name} [${c.id}] (mood ${G.chars[c.id].mood}, affection ${G.chars[c.id].aff}, wearing ${outfitOf(c)})`).join('; '):'nobody'}.
+Elsewhere: ${away.map(c=>`${c.name} in ${roomName(charRoom(c))}`).join('; ')||'nobody'}.
+House Harmony: ${G.harmony}/100.
+${eventInfo()}
+${G.summary?'\nSUMMARY SO FAR:\n'+G.summary+'\n':''}${G.memory.length?'\nMEMORY:\n- '+G.memory.join('\n- ')+'\n':''}
+RECENT STORY:
+${transcript()||'(the story is just beginning)'}
+
+PLAYER'S MOVE (${G.player.name}): ${action}
+
+Continue from here. Reply with the JSON object only.`}
+
+/* ---------- turn engine ---------- */
+function applyTurn(o,raw,opts){
+ let beats=arr(o?.beats);if(!beats.length)beats=salvage(raw);if(!beats.length)throw new Error('The AI reply was empty. Try again.');
+ for(const b of beats){const t=String(b?.text||'').trim();if(!t)continue;const c=findChar(b.who);c?pushMsg({k:'c',who:c.id,t}):pushMsg({k:'n',t})}
+ o=obj(o);const deltas=[];
+ for(const a of arr(o.affection)){const c=findChar(a?.who);if(!c)continue;const d=clamp(Math.round(+a.delta||0),-6,6);if(!d)continue;const ch=G.chars[c.id],from=ch.aff;ch.aff=clamp(from+d,0,100);ch.thoughts.unshift({turn:G.turn+1,day:G.day,part:partOf(G.min),d,from,to:ch.aff,t:String(a.thought||'')});ch.thoughts.length=Math.min(ch.thoughts.length,80);deltas.push({who:c.id,d})}
+ for(const[k,v]of Object.entries(obj(o.mood))){const c=findChar(k);if(c&&v)G.chars[c.id].mood=String(v).slice(0,24)}
+ for(const[k,v]of Object.entries(obj(o.outfit))){const c=findChar(k);if(c&&v)G.chars[c.id].outfit=String(v).slice(0,140)}
+ const hd=clamp(Math.round(+o.harmony||0),-10,10);if(hd){G.harmony=clamp(G.harmony+hd,0,100);deltas.push({who:'harmony',d:hd})}
+ if(deltas.length)pushMsg({k:'d',list:deltas});
+ G.min+=opts.minutes||clamp(Math.round(+o.minutes||10),1,120);
+ const rooms=new Set(STORY.rooms.map(r=>r.id));
+ for(const[k,v]of Object.entries(obj(o.moves))){const c=findChar(k);const rm=String(v||'');if(c&&(rm==='out'||rooms.has(rm)))G.chars[c.id].ov={room:rm,pk:pkey()}}
+ if(o.player_room&&rooms.has(o.player_room))G.room=o.player_room;
+ const el=obj(o.elsewhere);if(el.text&&rooms.has(el.room)&&el.room!==G.room){G.elsewhere={room:el.room,text:String(el.text).slice(0,140),turn:G.turn+1};pushMsg({k:'s',t:`${roomName(el.room)}: ${G.elsewhere.text}`})}
+ const e=todaysEvent();if(o.event_done&&e&&evState(e)==='active'){G.ev[e.day]='done';pushMsg({k:'s',ev:1,t:`Event complete: ${e.title}`});if(e.final)G.pendingEnd=true}
+ for(const m of arr(o.memory)){const s=String(m||'').trim().slice(0,180);if(s&&!G.memory.includes(s))G.memory.push(s)}G.memory=G.memory.slice(-40);
+ G.sugs=arr(o.suggestions).slice(0,3).map(s=>({a:String(s?.action||'').replace(/\*/g,''),l:String(s?.line||'').replace(/^"|"$/g,'')})).filter(s=>s.a||s.l)}
+
+async function playerTurn(text,opts={}){
+ if(busy)return;if(!S.apiKey){openSettings();toast('Add your API key to play.');return}
+ const g=G,snap=clone(G);busy=true;lastTurn={snap:clone(snap),text,opts};let ok=false;
+ if(opts.move){G.room=opts.move;pushMsg({k:'s',t:`You head to the ${roomName(opts.move)}.`})}
+ if(opts.note)pushMsg({k:'s',t:opts.note});
+ if(!opts.hidden)pushMsg({k:'p',t:text});
+ G.sugs=[];renderPlay();
+ try{
+  const raw=await chat([{role:'system',content:sysPrompt()},{role:'user',content:turnPrompt(text)}]);
+  if(G===g){applyTurn(parseJSON(raw),raw,opts);G.turn++;await afterTurn();ok=true}
+ }catch(e){if(G===g){G=snap;if(!opts.hidden&&VIEW==='play'){const i=$('#inp');if(i&&!i.value)i.value=text}}toast(e.message)}
+ busy=false;
+ if(G===g||G===snap){await save();if(VIEW==='play')renderPlay()}
+ if(ok&&G===g&&G.pendingEnd&&!G.ended)await finishStory();
+}
+async function afterTurn(){
+ const e=todaysEvent();if(e&&!G.ev[e.day]&&G.min>evEnd(e)){G.ev[e.day]='missed';G.harmony=clamp(G.harmony-3,0,100);pushMsg({k:'s',t:`You missed today's event: ${e.title}`});if(e.final)G.pendingEnd=true}
+ if(G.harmony<=10&&!G.ended){G.pendingEnd=true;return}
+ queueRoom();
+ if(G.msgs.length-G.sumUpto>56)summarize();
+ if(G.min>=1440+150&&!G.pendingEnd){pushMsg({k:'s',t:'Exhaustion wins. You drift off to sleep.'});await save();setTimeout(()=>endDay(),400)}
+}
+async function summarize(){const g=G,upto=G.msgs.length-26;const part=G.msgs.slice(G.sumUpto,upto).filter(m=>m.k!=='i'&&m.k!=='d').map(m=>m.k==='n'?m.t:m.k==='c'?(chr(m.who)?.name)+': '+m.t:m.k==='p'?G.player.name+': '+m.t:'('+m.t+')').join('\n');
+ try{const t=await chat([{role:'user',content:`Update the running summary of an interactive story so the narrator never forgets what happened. Keep names, relationships, promises, secrets, conflicts, who is with whom, and where things stand. Under 220 words, plain prose.\n\nPREVIOUS SUMMARY:\n${G.summary||'(none)'}\n\nNEW EVENTS:\n${part}`}],{max:600,temp:.4});if(G===g&&t){G.summary=t.slice(0,2000);G.sumUpto=upto;save()}}catch(e){console.warn('summary failed',e)}}
+async function endDay(){
+ if(busy||!G)return;busy=true;const g=G;cover('The house goes quiet…','Everyone writes in their diary.');
+ try{const raw=await chat([{role:'user',content:`It is the end of ${dayLabel()} in the interactive story "${STORY.title}". Write each character's private diary entry for today: 2-4 sentences, first person, in their own voice, about their day and their feelings about ${G.player.name} (${G.player.pronouns}). All characters are adults.\nCharacters: ${STORY.characters.map(c=>`${c.name} [${c.id}] affection ${G.chars[c.id].aff}/100, mood ${G.chars[c.id].mood}`).join('; ')}\n${G.summary?'Summary: '+G.summary+'\n':''}Today:\n${transcript(40)}\n\nReply with only JSON: {"<id>":"entry"}`}],{max:900,temp:.8});
+  const d=obj(parseJSON(raw));for(const[k,v]of Object.entries(d)){const c=findChar(k);if(c&&v&&G===g)G.chars[c.id].diary.unshift({day:G.day,t:String(v).slice(0,900)})}}catch(e){console.warn('diary failed',e)}
+ if(G!==g){busy=false;uncover();return}
+ const e=todaysEvent();if(e&&!G.ev[e.day]){G.ev[e.day]='missed';pushMsg({k:'s',t:`You missed today's event: ${e.title}`});if(e.final)G.pendingEnd=true}
+ const lastDay=Math.max(...STORY.events.map(x=>x.day),7);
+ for(const c of STORY.characters)G.chars[c.id].ov=null;
+ busy=false;uncover();
+ if(G.day>=lastDay||G.pendingEnd){await save();return finishStory()}
+ G.day++;G.min=8*60;G.room=STORY.player_room;G.elsewhere=null;
+ pushMsg({k:'s',t:`${dayLabel()} · ${clock(G.min)}`});await save();
+ if(VIEW!=='play')viewPlay();else renderPlay();
+ playerTurn('*wakes up in their room as a new day starts*',{hidden:true,minutes:5});
+}
+function computeEnding(){const a=STORY.characters.map(c=>({c,a:G.chars[c.id].aff})).sort((x,y)=>y.a-x.a);const hi=a.filter(x=>x.a>=75).length,avg=a.reduce((s,x)=>s+x.a,0)/a.length;
+ if(G.harmony<=10)return{key:'out'};if(hi>=Math.min(3,a.length)&&G.harmony>=65)return{key:'group'};if(a[0].a>=75)return{key:'one',with:a[0].c.id};if(G.harmony>=55&&avg>=50)return{key:'found'};return{key:'out'}}
+async function finishStory(){
+ const g=G;const end=computeEnding();const def=STORY.endings?.[end.key]||{title:end.key,desc:''};
+ let title=def.title;if(end.key==='one')title+=` · ${chr(end.with).name}`;
+ cover('Writing your ending…','The week on '+STORY.title+' comes to a close.');
+ let epi=def.desc;
+ try{epi=await chat([{role:'user',content:`Write the epilogue for the interactive story "${STORY.title}". Ending reached: "${title}": ${def.desc}${end.with?` The player ends up with ${chr(end.with).name}.`:''}\nPlayer: ${G.player.name} (${G.player.pronouns}). All characters are adults.\nFinal affection: ${STORY.characters.map(c=>`${c.name} ${G.chars[c.id].aff}/100`).join(', ')}. House Harmony ${G.harmony}/100.\n${G.summary?'Story summary: '+G.summary+'\n':''}Last scenes:\n${transcript(30)}\n\nWrite 3 short paragraphs in second person, specific to what actually happened, ending on a single resonant image. Plain prose only.`}],{max:900,temp:.85})||epi}catch(e){console.warn(e)}
+ uncover();if(G!==g)return;
+ G.ended={key:end.key,title,epi,with:end.with||null};G.pendingEnd=false;await save();
+ const f=arr(await DB.get('endings:'+STORY.id));if(!f.includes(end.key)){f.push(end.key);await DB.set('endings:'+STORY.id,f)}
+ showEnding()}
+
+/* ---------- save / new ---------- */
+const save=()=>G&&DB.set('save:'+G.storyId,G);
+function newGame(s,player){const o=s.opening||{};
+ const g={v:1,storyId:s.id,player,day:1,min:toMin(o.time||'16:00'),room:o.room||s.player_room,turn:0,harmony:70,msgs:[],chars:{},ev:{},memory:[],summary:'',sumUpto:0,sugs:[],ended:null,elsewhere:null};
+ for(const c of s.characters)g.chars[c.id]={aff:c.affection??20,mood:'Curious',ov:null,outfit:'',thoughts:[],diary:[]};
+ G=g;pushMsg({k:'s',t:`${dayLabel()} · ${clock(g.min)}`});
+ for(const b of arr(o.beats)){const t=String(b.text||'').replaceAll('{name}',player.name);const c=findChar(b.who);if(c){pushMsg({k:'c',who:c.id,t});g.chars[c.id].ov={room:g.room,pk:pkey()}}else pushMsg({k:'n',t})}
+ g.sugs=arr(o.suggestions).slice(0,3).map(x=>({a:x.action||'',l:x.line||''}));return g}
+
+/* ---------- views: home ---------- */
+async function viewHome(){VIEW='home';STORY=null;closeSheet();const stories=await allStories();const saves={};for(const s of stories){saves[s.id]=await DB.get('save:'+s.id);await preload(s.id)}
+ app.innerHTML=`<div class="page">
+ <header class="home-h"><div><h1 class="brand">Lit <span>Windows</span></h1><p class="sub">Story games set in houses that keep living when you leave the room.</p></div><button class="icon-btn" data-act="settings" aria-label="Settings">${ic('gear')}</button></header>
+ ${S.apiKey?'':`<div class="notice"><b>Add your API key to start playing.</b><span>Stories run on your own Venice account, or any OpenAI-compatible provider. The key stays on this device.</span><button class="btn small" data-act="settings">Open settings</button></div>`}
+ <h2 class="sec">Library</h2>
+ <div class="shelf">${stories.map(s=>{const sv=saves[s.id];const k=imgKey('cover',s.id);return `<button class="card" data-act="open" data-id="${esc(s.id)}"><div class="cover${hasImg(k)}" ${imgAttr(k)}>${houseFig(s.id)}</div><div class="meta"><div class="tags">${arr(s.tags).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div><h3>${esc(s.title)}</h3><p>${esc(s.tagline)}</p><span class="prog">${sv?(sv.ended?'Finished · '+esc(sv.ended.title):`Day ${sv.day} · ${clock(sv.min)}`):'Not started'}</span></div></button>`}).join('')}
+ <button class="card create" data-act="create">${ic('plus')}<b>Create your own</b><span>Describe a premise and the AI builds the house, cast, daily events and endings.</span></button></div></div>`;
+ stories.forEach(queueCover)}
+
+/* ---------- views: story page ---------- */
+async function viewStory(id){const s=await getStory(id);if(!s)return viewHome();STORY=s;VIEW='story';closeSheet();await preload(id);
+ const sv=await DB.get('save:'+id),found=arr(await DB.get('endings:'+id)),pl={...s.player,...obj(await DB.get('player:'+id))};const ck=imgKey('cover',id);
+ app.innerHTML=`<div class="story-v"><div class="hero${hasImg(ck)}" ${imgAttr(ck)}><button class="icon-btn" data-act="home" aria-label="Back to library">${ic('back')}</button>${houseFig(id)}</div>
+ <div class="page"><div class="tags">${arr(s.tags).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+ <div><h1 class="title">${esc(s.title)}</h1><p class="tagline">${esc(s.tagline)}</p></div>
+ <p class="syn">${esc(s.synopsis)}</p>
+ <div class="goal">${ic('flag')}<div><b>Your goal</b><p>${esc(s.goal)}</p></div></div>
+ <h2 class="sec">You</h2>
+ <div class="you-card"><span class="badge">PLAYER</span><div class="row"><label>Name<input id="p-name" value="${esc(pl.name)}" maxlength="40" autocomplete="off"></label><label>Pronouns<input id="p-pro" value="${esc(pl.pronouns)}" maxlength="20" autocomplete="off"></label></div><label>About you<textarea id="p-bio" rows="3" maxlength="400">${esc(pl.bio)}</textarea></label><p class="muted">Changes apply when you start a new game.</p></div>
+ <h2 class="sec">Characters</h2>
+ <div class="cast">${s.characters.map(c=>{const k=imgKey('por',id,c.id);return `<div class="cast-card"><div class="por${hasImg(k)}" style="--c:${esc(c.color)};${URLS.get(k)?`background-image:url(${URLS.get(k)})`:''}" data-img="${esc(k)}">${esc(c.name[0])}</div><div><h3>${esc(c.name)} <span class="age">${esc(c.age)}</span></h3><p class="role">${esc(c.role)}</p><p class="intro">${esc(c.intro)}</p></div></div>`}).join('')}</div>
+ <h2 class="sec">Endings · ${found.length}/${END_KEYS.length} found</h2>
+ <ul class="endings">${END_KEYS.map(k=>found.includes(k)?`<li><b>${esc(s.endings?.[k]?.title)}</b>${esc(s.endings?.[k]?.desc)}</li>`:'<li class="locked">Locked ending</li>').join('')}</ul>
+ ${s.builtin?'':`<div><button class="btn danger small" data-act="delstory">Delete this story</button></div>`}
+ </div>
+ <div class="cta-bar">${sv?`<button class="btn ghost" data-act="new" id="newbtn">Start new</button><button class="btn" data-act="continue">${sv.ended?'See ending':'Continue · Day '+sv.day}</button>`:`<button class="btn" data-act="new">${ic('spark')} Start story</button>`}</div></div>`;
+ const pSave=()=>DB.set('player:'+id,{name:$('#p-name').value.trim()||s.player.name,pronouns:$('#p-pro').value.trim()||'they/them',bio:$('#p-bio').value.trim()});
+ ['#p-name','#p-pro','#p-bio'].forEach(q=>$(q).addEventListener('change',pSave));
+ queueCover(s);queuePortraits(s)}
+
+/* ---------- views: play ---------- */
+function viewPlay(){VIEW='play';closeSheet();
+ app.innerHTML=`<div class="play"><div class="bg" id="bg"></div>
+ <header class="top"><button class="icon-btn" data-act="leave" aria-label="Back to story page">${ic('back')}</button><div class="clock" id="clock"></div><button class="icon-btn" data-act="settings" aria-label="Settings">${ic('gear')}</button></header>
+ <div class="chips" id="chips"></div>
+ <nav class="rail"><button class="icon-btn" data-act="map" aria-label="House map">${ic('house')}</button><button class="icon-btn" data-act="chars" aria-label="Characters">${ic('people')}</button><button class="icon-btn" data-act="gallery" aria-label="Gallery">${ic('image')}</button></nav>
+ <main class="log" id="log" aria-live="polite"></main>
+ <form class="composer" id="composer"><textarea id="inp" rows="1" aria-label="Your move" placeholder="Type what you do or say…" maxlength="1200"></textarea>
+ <div class="c-row"><button type="button" class="icon-btn sm" data-act="togglesugs" aria-label="Show or hide suggestions">${ic('list')}</button><button type="button" class="icon-btn sm" data-act="star" aria-label="Insert an action">${ic('star')}</button><span class="hint">Wrap actions in *asterisks*</span><button class="send" aria-label="Send">${ic('send')}</button></div></form></div>`;
+ const inp=$('#inp');const fit=()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,140)+'px'};inp.addEventListener('input',fit);
+ inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&matchMedia('(hover:hover)').matches){e.preventDefault();$('#composer').requestSubmit()}});
+ $('#composer').addEventListener('submit',e=>{e.preventDefault();if(busy)return;const t=inp.value.trim();inp.value='';fit();playerTurn(t||'*waits to see what happens next*',t?{}:{hidden:true})});
+ renderPlay();queueRoom();queuePortraits(STORY)}
+function renderPlay(){if(VIEW!=='play'||!G)return;
+ const rk=imgKey('room',STORY.id,G.room),bg=$('#bg');bg.dataset.img=rk;bg.className='bg'+hasImg(rk);bg.style.backgroundImage=URLS.get(rk)?`url(${URLS.get(rk)})`:'';
+ $('#clock').innerHTML=`<b>Day <i>${G.day}</i> · ${clock(G.min)}</b><span>${WEEK[(G.day-1)%7]} ${partOf(G.min)} · ${esc(roomName(G.room))}</span>`;
+ const e=todaysEvent(),st=evState(e),here=present();
+ $('#chips').innerHTML=(e?`<button class="chip ev${st==='active'?' live':''}${st==='done'?' done':''}" data-act="map">${ic('spark')}<b>${esc(e.title)}</b> ${st==='done'?'1/1':'0/1'} · ${st==='active'?esc(roomName(e.room)):st==='upcoming'?e.start:st==='done'?'done':'missed'}</button>`:'')
+  +`<button class="chip" data-act="chars">${ic('people')}${here.length?esc(here.map(cname).join(', ')):'Nobody here'}</button><span class="chip">${ic('heart')}Harmony ${G.harmony}</span>`;
+ const log=$('#log');let h='';const lastAI=[...G.msgs].reverse().find(m=>m.k==='c'||m.k==='n');
+ for(const m of G.msgs.slice(-160)){
+  if(m.k==='n')h+=`<p class="m-n">${fmt(m.t)}</p>`;
+  else if(m.k==='c'){const c=chr(m.who)||{name:m.who,color:'#f3b660'};const k=imgKey('por',STORY.id,m.who);h+=`<div class="m-c" style="--c:${esc(c.color)}"><span class="av${hasImg(k)}" ${imgAttr(k)}>${esc(c.name[0])}</span><div><span class="m-name">${esc(c.name)}</span><div class="bubble">${fmt(m.t)}</div></div></div>`}
+  else if(m.k==='p')h+=`<div class="m-p"><div class="bubble">${fmt(m.t)}</div></div>`;
+  else if(m.k==='s')h+=`<div class="m-s${m.ev?' ev':''}">${esc(m.t)}</div>`;
+  else if(m.k==='d')h+=`<div class="m-d">${m.list.map(x=>x.who==='harmony'?`<span class="hm ${x.d>0?'up':'down'}">Harmony ${x.d>0?'+':''}${x.d}</span>`:`<span class="${x.d>0?'up':'down'}">${esc(cname(chr(x.who)||{name:x.who}))} ${x.d>0?'+':''}${x.d}</span>`).join('')}</div>`;
+  else if(m.k==='i')h+=`<figure class="m-i" data-act="zoom" data-k="${esc(m.key)}">${URLS.has(m.key)?'':pendingImgs.has(m.key)?'Painting…':'Image unavailable'}<img data-img="${esc(m.key)}" ${URLS.get(m.key)?`src="${URLS.get(m.key)}"`:''} alt="Scene picture"></figure>`;
+  if(m===lastAI&&!busy)h+=`<div class="tools"><button class="icon-btn sm" data-act="picture" aria-label="Picture this moment">${ic('image')}</button>${lastTurn&&G.turn>0?`<button class="icon-btn sm" data-act="regen" aria-label="Regenerate the last reply">${ic('redo')}</button>`:''}</div>`}
+ if(busy)h+=`<div class="typing"><span class="dots"><i></i><i></i><i></i></span>Writing the scene…</div>`;
+ else if(showSugs&&G.sugs.length)h+=`<div class="sugs">${G.sugs.map((s,i)=>`<div class="sug"><button class="pen" data-act="editsug" data-i="${i}" aria-label="Edit this suggestion">${ic('pen')}</button><button class="go" data-act="sug" data-i="${i}">${s.a?`<em>${esc(s.a)}</em> `:''}${s.l?'"'+esc(s.l)+'"':''}</button></div>`).join('')}</div>`;
+ log.innerHTML=h;log.scrollTop=log.scrollHeight;
+ $('.send').disabled=busy}
+const sugText=s=>(s.a?`*${s.a}* `:'')+(s.l?`"${s.l}"`:'');
+
+/* ---------- sheets ---------- */
+function openSheet(title,body,cls=''){sheet.innerHTML=`<div class="sheet-bg" data-act="closesheet"></div><div class="sheet ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="sheet-h"><b>${esc(title)}</b><button class="icon-btn sm" data-act="closesheet" aria-label="Close">${ic('x')}</button></div><div class="sheet-body" id="sb">${body}</div></div>`;sheet.hidden=false}
+function closeSheet(){sheet.hidden=true;sheet.innerHTML='';SHEET=null}
+let SHEET=null,selChar=null,cTab='thoughts',selRoom=null;
+function mapBody(){const floors=[['attic','Attic'],['upstairs','Upstairs'],['ground','Ground floor'],['outside','Outside']];const occ={};for(const c of STORY.characters)(occ[charRoom(c)]||(occ[charRoom(c)]=[])).push(c);
+ const e=todaysEvent(),est=evState(e);const narrow=innerWidth<520;
+ const cell=r=>{const who=occ[r.id]||[],here=G.room===r.id,lit=who.length||here;const hint=G.elsewhere&&G.elsewhere.room===r.id&&G.turn-G.elsewhere.turn<3?`<span class="hintx">${esc(G.elsewhere.text)}</span>`:'';
+  return `<button class="room${lit?' lit':''}${here?' here':''}" data-act="room" data-id="${esc(r.id)}"><span class="rn">${esc(r.name)}</span>${hint}<span class="occ">${here?'<span class="you">YOU</span>':''}${who.map(c=>{const k=imgKey('por',STORY.id,c.id);return `<span class="av${hasImg(k)}" style="--c:${esc(c.color)};${URLS.get(k)?`background-image:url(${URLS.get(k)})`:''}" data-img="${esc(k)}" title="${esc(c.name)}">${esc(c.name[0])}</span>`}).join('')}</span>${e&&e.room===r.id&&(est==='active'||est==='upcoming')?'<span class="evm" title="Event"></span>':''}</button>`};
+ let h='<div class="map">';for(const[f,label]of floors){const rs=STORY.rooms.filter(r=>(r.floor||'ground')===f);if(!rs.length)continue;
+  if(f==='attic')h+=`<div class="roof">${rs.slice(0,1).map(cell).join('')}</div>`+(rs.length>1?`<div class="floor"><div class="rooms" style="grid-template-columns:repeat(${Math.min(rs.length-1,3)},1fr)">${rs.slice(1).map(cell).join('')}</div></div>`:'');
+  else{const cols=Math.min(rs.length,narrow?3:5);h+=`<div class="floor ${f}"><span class="fl">${label}</span><div class="rooms" style="grid-template-columns:repeat(${cols},1fr)">${rs.map(cell).join('')}</div></div>`}}
+ const out=occ.out||[];h+=`</div><div class="outstrip">${ic('house')} Out of the house: ${out.length?esc(out.map(c=>c.name).join(', ')):'nobody'}</div>`;
+ const canSleep=G.room===STORY.player_room&&(Math.floor(G.min/60)>=21||G.min>=1440);
+ h+=`<div class="btn-row"><button class="btn ghost small" data-act="wait" ${busy?'disabled':''}>${ic('clock')} Wait an hour</button><button class="btn ghost small" data-act="sleep" ${canSleep&&!busy?'':'disabled'}>${ic('moon')} Sleep</button></div>${canSleep?'':'<p class="muted">You can sleep in your room after 21:00.</p>'}`;
+ if(e)h+=`<div class="roompanel"><span class="sec">Today's event</span><h3>${esc(e.title)}</h3><p class="muted">${esc(roomName(e.room))} · ${e.start}–${clock(evEnd(e))} · ${est==='done'?'Complete':est==='active'?'Happening now':est==='upcoming'?'Later today':'Missed'}</p><p>${esc(e.objective)}</p></div>`;
+ if(selRoom){const r=room(selRoom);if(r){const who=occ[r.id]||[];h=`<div class="roompanel"><h3>${esc(r.name)}</h3><p class="muted">${esc(r.desc)}</p><p>${who.length?esc(who.map(c=>c.name).join(', '))+(who.length>1?' are':' is')+' here.':'Nobody is here right now.'}</p>${G.room===r.id?'<p class="muted">You are here.</p>':`<button class="btn small" data-act="goroom" data-id="${esc(r.id)}" ${busy?'disabled':''}>Go to ${esc(r.name)}</button>`}</div>`+h}}
+ return h}
+function charsBody(){const cs=STORY.characters;selChar=selChar&&chr(selChar)?selChar:cs[0].id;const c=chr(selChar),ch=G.chars[c.id],k=imgKey('por',STORY.id,c.id);
+ let tab='';if(cTab==='thoughts')tab=ch.thoughts.length?ch.thoughts.map(t=>`<div class="th"><div class="th-h"><b class="${t.d>0?'up':'down'}">${t.d>0?'+':''}${t.d}</b><span>Turn ${t.turn} · Day ${t.day} ${esc(t.part)}</span><span class="r">${t.from} → ${t.to}</span></div><p>${esc(t.t)}</p></div>`).join(''):`<p class="empty">No thoughts yet. They show up here as ${esc(cname(c))} reacts to you.</p>`;
+ else if(cTab==='outfits'){const outs=[...URLS.keys()].filter(x=>x.startsWith(imgKey('out',STORY.id,c.id)+':'));tab=`<form class="group" id="outform"><label>Describe an outfit<input id="outdesc" placeholder="e.g. a red sundress and sandals" maxlength="160"></label><button class="btn small">${ic('spark')} Generate outfit</button></form>${outs.length||[...pendingImgs].some(x=>x.startsWith(imgKey('out',STORY.id,c.id)))?`<div class="grid-img">${[...pendingImgs].filter(x=>x.startsWith(imgKey('out',STORY.id,c.id))).map(()=>'<button disabled><span>Painting…</span></button>').join('')}${outs.map(x=>`<button data-act="setpor" data-k="${esc(x)}" style="background-image:url(${URLS.get(x)})" aria-label="Use as portrait"><span>Use as portrait</span></button>`).join('')}</div>`:'<p class="empty">Generated outfits appear here. Tap one to make it the portrait.</p>'}`}
+ else tab=ch.diary.length?ch.diary.map(d=>`<div class="diary"><b>Day ${d.day}</b><p>${esc(d.t)}</p></div>`).join(''):`<p class="empty">${esc(cname(c))} writes a diary entry every night when you sleep.</p>`;
+ return `<div class="car">${cs.map(x=>{const kk=imgKey('por',STORY.id,x.id);return `<button data-act="selchar" data-id="${esc(x.id)}" class="${x.id===c.id?'on':''}" aria-label="${esc(x.name)}"><span class="av lg${hasImg(kk)}" style="--c:${esc(x.color)};${URLS.get(kk)?`background-image:url(${URLS.get(kk)})`:''}" data-img="${esc(kk)}">${esc(x.name[0])}</span></button>`}).join('')}</div>
+ <div class="ccard"><div class="ccard-top"><div><h3>${esc(c.name)} <span class="age">${esc(c.age)}</span></h3><p class="role">${esc(c.role)}</p><div class="pills"><span class="pill">Mood · ${esc(ch.mood)}</span><span class="pill">${esc(roomName(charRoom(c)))}</span></div></div><div class="por${hasImg(k)}" style="--c:${esc(c.color)};width:92px;${URLS.get(k)?`background-image:url(${URLS.get(k)})`:''}" data-img="${esc(k)}">${esc(c.name[0])}</div></div>
+ <div class="aff"><span>Affection</span><div class="bar"><i style="width:${ch.aff}%"></i></div><b>${ch.aff}<small>/100</small></b></div>
+ <div class="aff"><span>Harmony</span><div class="bar hm"><i style="width:${G.harmony}%"></i></div><b style="color:var(--sage)">${G.harmony}<small>/100</small></b></div>
+ <p class="intro">${esc(c.intro)}</p><p class="muted">Wearing ${esc(outfitOf(c))}.</p></div>
+ <div class="tabs" role="tablist">${[['thoughts','Inner thoughts'],['outfits','Outfits'],['diary','Diary']].map(([t,l])=>`<button role="tab" aria-selected="${cTab===t}" data-act="ctab" data-t="${t}" class="${cTab===t?'on':''}">${l}</button>`).join('')}</div><div>${tab}</div>`}
+function galleryBody(){const sid=STORY.id;const ks=[...URLS.keys()].filter(k=>k.split(':')[1]===sid&&!k.startsWith('cover'));const order=['scn','out','por','room'];ks.sort((a,b)=>order.indexOf(a.split(':')[0])-order.indexOf(b.split(':')[0]));
+ const lbl=k=>{const p=k.split(':');return p[0]==='scn'?'Scene':p[0]==='room'?roomName(p[2]):p[0]==='por'?cname(chr(p[2])||{name:'Portrait'}):'Outfit'};
+ return ks.length?`<div class="grid-img">${ks.map(k=>`<button data-act="zoom" data-k="${esc(k)}" style="background-image:url(${URLS.get(k)})"><span>${esc(lbl(k))}</span></button>`).join('')}</div>`:'<p class="empty">Rooms, portraits, outfits and scene pictures you generate collect here.</p>'}
+function refreshSheet(){if(SHEET==='map')$('#sb').innerHTML=mapBody();else if(SHEET==='chars')$('#sb').innerHTML=charsBody();else if(SHEET==='gallery')$('#sb').innerHTML=galleryBody()}
+function openSettings(){SHEET='settings';const o=(v,l,cur)=>`<option value="${v}"${v===cur?' selected':''}>${l}</option>`;
+ openSheet('Settings',`<div class="group"><h3>Story AI</h3>
+ <label>Provider<select id="s-preset">${o('venice','Venice',S.textPreset)}${o('openrouter','OpenRouter',S.textPreset)}${o('custom','Custom (OpenAI-compatible)',S.textPreset)}</select></label>
+ <label${S.textPreset==='custom'?'':' hidden'} id="s-base-l">Base URL<input id="s-base" value="${esc(S.baseUrl)}" placeholder="https://…/v1" autocomplete="off"></label>
+ <label>API key<input id="s-key" type="password" value="${esc(S.apiKey)}" placeholder="Paste your key" autocomplete="off"></label>
+ <label>Model<input id="s-model" list="dl-text" value="${esc(S.textModel)}" autocomplete="off"></label><datalist id="dl-text"></datalist>
+ <div class="btn-row"><button class="btn ghost small" data-act="loadmodels">Load model list</button><button class="btn ghost small" data-act="testai">Test connection</button></div>
+ <p class="muted">Your key is stored only on this device and is sent only to the provider you pick.</p></div>
+ <div class="group"><h3>Images</h3>
+ <label>Image service<select id="s-imgtype">${o('venice','Venice',S.imgType)}${o('openai','OpenAI-compatible',S.imgType)}${o('off','Off',S.imgType)}</select></label>
+ <label${S.imgType==='openai'?'':' hidden'} id="s-ibase-l">Image base URL<input id="s-ibase" value="${esc(S.imgBase)}" placeholder="Blank uses the story AI's URL" autocomplete="off"></label>
+ <label>Image API key<input id="s-ikey" type="password" value="${esc(S.imgKey)}" placeholder="Blank uses the story AI key" autocomplete="off"></label>
+ <label>Image model<input id="s-imodel" list="dl-img" value="${esc(S.imgModel)}" autocomplete="off"></label><datalist id="dl-img"></datalist>
+ <label>Art style<textarea id="s-style" rows="2">${esc(S.artStyle)}</textarea></label>
+ <label class="check"><input type="checkbox" id="s-auto" ${S.autoImages?'checked':''}>Make room backgrounds, covers and portraits automatically (once each)</label></div>
+ <div class="group"><h3>Narrator</h3><label>Extra instructions for the AI<textarea id="s-note" rows="3" placeholder="e.g. Write longer scenes. More banter.">${esc(S.authorNote)}</textarea></label></div>
+ <div class="group"><h3>Your data</h3><p class="muted">Saves and images live on this device. Export a backup before clearing Safari data.</p><div class="btn-row"><button class="btn ghost small" data-act="export">Export backup</button><label class="btn ghost small" style="display:inline-flex">Import backup<input type="file" id="s-import" accept="application/json,.json" hidden></label><button class="btn danger small" data-act="clearimgs" id="clrbtn">Delete all images</button></div></div>`);
+ const bind=(id,fn,ev='change')=>$(id).addEventListener(ev,()=>{fn($(id));saveSettings()});
+ bind('#s-preset',el=>{S.textPreset=el.value;if(PRESETS[el.value]){S.baseUrl=PRESETS[el.value];$('#s-base').value=S.baseUrl}$('#s-base-l').hidden=el.value!=='custom';if(el.value==='openrouter'&&!S.textModel.includes('/'))$('#s-model').value=S.textModel='z-ai/glm-4.6';if(el.value==='venice'&&S.textModel.includes('/'))$('#s-model').value=S.textModel='zai-org-glm-4.6'});
+ bind('#s-base',el=>S.baseUrl=el.value.trim());bind('#s-key',el=>S.apiKey=el.value.trim());bind('#s-model',el=>S.textModel=el.value.trim());
+ bind('#s-imgtype',el=>{S.imgType=el.value;$('#s-ibase-l').hidden=el.value!=='openai'});bind('#s-ibase',el=>S.imgBase=el.value.trim());bind('#s-ikey',el=>S.imgKey=el.value.trim());bind('#s-imodel',el=>S.imgModel=el.value.trim());
+ bind('#s-style',el=>S.artStyle=el.value.trim()||DEF.artStyle);bind('#s-auto',el=>S.autoImages=el.checked);bind('#s-note',el=>S.authorNote=el.value.trim());
+ $('#s-import').addEventListener('change',importBackup)}
+
+/* ---------- create your own ---------- */
+function viewCreate(){VIEW='create';closeSheet();
+ app.innerHTML=`<div class="page"><header class="home-h"><button class="icon-btn" data-act="home" aria-label="Back to library">${ic('back')}</button></header>
+ <div><h1 class="title">Create a story</h1><p class="sub">Describe the setup. The AI designs the house, the cast and their schedules, seven days of events, and four endings.</p></div>
+ <form id="cform" class="you-card" style="gap:14px">
+ <label>Premise<textarea id="c-prem" rows="4" required maxlength="1200" placeholder="e.g. You inherit a run-down beach house in Malibu and have to share it with the three people your late aunt rented rooms to."></textarea></label>
+ <div class="field-row"><label>Setting<input id="c-set" maxlength="160" placeholder="a beach house in Malibu"></label><label>Tone or genre<input id="c-tone" maxlength="80" placeholder="romance, comedy, mystery…"></label></div>
+ <div class="field-row"><label>Characters<select id="c-n">${[2,3,4,5].map(n=>`<option${n===4?' selected':''}>${n}</option>`).join('')}</select></label><label>Ending type<select id="c-end"><option value="romance">Romance (incl. group ending)</option><option value="drama">Drama / friendship</option></select></label></div>
+ <label>Characters you want (optional)<textarea id="c-cast" rows="3" maxlength="1200" placeholder="Names, ages (18+), looks, jobs, personalities…"></textarea></label>
+ <span class="badge">PLAYER</span>
+ <div class="field-row"><label>Your name<input id="c-name" maxlength="40" value="Alex"></label><label>Pronouns<input id="c-pro" maxlength="20" value="he/him"></label></div>
+ <label>About you<textarea id="c-bio" rows="2" maxlength="400" placeholder="Who you are and why you're here."></textarea></label>
+ <button class="btn">${ic('spark')} Build my story</button><p class="muted">This takes 30–90 seconds and uses your AI credits.</p></form></div>`;
+ $('#cform').addEventListener('submit',e=>{e.preventDefault();buildStory()})}
+async function buildStory(){if(!S.apiKey){openSettings();return toast('Add your API key first.')}
+ const v=id=>$(id).value.trim();const brief={prem:v('#c-prem'),set:v('#c-set'),tone:v('#c-tone'),n:+v('#c-n'),cast:v('#c-cast'),end:v('#c-end'),player:{name:v('#c-name')||'Alex',pronouns:v('#c-pro')||'they/them',bio:v('#c-bio')}};
+ cover('Building your story…','Designing the house, the cast, a week of events and the endings.');
+ try{const raw=await chat([{role:'user',content:`Design an interactive story for a game where the player lives in one building with several characters for 7 in-game days. Characters keep daily schedules and move between rooms, one event happens each day, and the ending depends on each character's affection (0-100) and House Harmony (0-100, jealousy and drama lower it).
+
+BRIEF
+Premise: ${brief.prem}
+Setting: ${brief.set||'(your choice)'}
+Tone/genre: ${brief.tone||'(your choice)'}
+Cast: exactly ${brief.n} characters. ${brief.cast?'Wishes: '+brief.cast:''}
+Endings style: ${brief.end==='romance'?'romance: "one" = the player ends up with one character, "group" = a shared relationship with several characters':'"one" = one deep friendship or partnership, "group" = the whole group becomes inseparable'}.
+Player: ${brief.player.name} (${brief.player.pronouns}). ${brief.player.bio}
+
+RULES: every character is an adult aged 18 or older. Use 7-11 rooms on floors "attic", "upstairs", "ground", "outside" (ground and upstairs required), including a room for the player. Schedules use room ids or "out". Exactly 7 events, one per day; day 7 is the finale. Times are "HH:MM" 24h (use 24:00-27:00 for after midnight); each event window lasts 2-5 hours; "cast" lists the character ids involved.
+
+Reply with only this JSON:
+{"title":"","tagline":"one line","synopsis":"2-3 sentences","goal":"one line","tags":["",""],"setting":"one sentence describing the building","cover":"image prompt for the building exterior","rules":"one line of extra narrator guidance",
+"rooms":[{"id":"snake_case","name":"","floor":"ground","desc":"one sentence"}],
+"player_room":"<room id>",
+"characters":[{"id":"snake_case","name":"Full Name","age":25,"gender":"woman|man|person","role":"short relation to the player","look":"appearance for image prompts, include age","outfit":"default outfit","personality":"2 sentences incl. a want and a secret","intro":"2 sentences shown to the player","color":"#hex","affection":20,"schedule":{"morning":"","afternoon":"","evening":"","night":""}}],
+"events":[{"day":1,"title":"","room":"","start":"19:00","end":"22:00","cast":["<id>"],"desc":"","objective":""}],
+"opening":{"room":"","time":"16:00","beats":[{"who":"narrator","text":""},{"who":"<character id>","text":"*action* words"}],"suggestions":[{"action":"","line":""},{"action":"","line":""},{"action":"","line":""}]},
+"endings":{"group":{"title":"","desc":""},"one":{"title":"","desc":""},"found":{"title":"","desc":""},"out":{"title":"","desc":""}}}`}],{max:6000,temp:.9});
+  const s=normalizeStory(parseJSON(raw),brief);const list=arr(await DB.get('stories'));list.push(s);await DB.set('stories',list);await DB.set('player:'+s.id,brief.player);uncover();viewStory(s.id)}
+ catch(e){uncover();toast(e.message)}}
+function normalizeStory(d,brief){if(!d||!Array.isArray(d.characters)||!Array.isArray(d.rooms))throw new Error('The AI returned an incomplete story. Try again, or simplify the premise.');
+ const sid=x=>String(x||'').toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_|_$/g,'').slice(0,30)||uid();
+ const rooms=[],rids=new Set();for(const r of d.rooms){let id=sid(r.id||r.name);while(rids.has(id))id+='_2';rids.add(id);rooms.push({id,name:String(r.name||id).slice(0,40),floor:['attic','upstairs','ground','outside'].includes(r.floor)?r.floor:'ground',desc:String(r.desc||'').slice(0,240)})}
+ if(rooms.length<2)throw new Error('The AI designed too few rooms. Try again.');
+ const mapR=x=>{const i=sid(x);return rids.has(i)?i:(rooms.find(r=>r.name.toLowerCase()===String(x||'').toLowerCase())?.id)};
+ let pr=mapR(d.player_room);if(!pr){pr='your_room';rooms.push({id:pr,name:'Your room',floor:'upstairs',desc:'Your small room.'});rids.add(pr)}
+ const cids=new Set();const chars=d.characters.slice(0,6).map((c,i)=>{let id=sid(c.id||c.name);while(cids.has(id))id+='_2';cids.add(id);const sc=obj(c.schedule),sched={};for(const p of['morning','afternoon','evening','night']){sched[p]=String(sc[p]||'')==='out'?'out':(mapR(sc[p])||'out')}
+  return{id,name:String(c.name||'Someone').slice(0,40),age:Math.max(18,parseInt(c.age)||21),gender:['woman','man','person'].includes(c.gender)?c.gender:'person',role:String(c.role||'').slice(0,60),look:String(c.look||'').slice(0,300),outfit:String(c.outfit||'').slice(0,160),personality:String(c.personality||'').slice(0,500),intro:String(c.intro||'').slice(0,300),color:/^#[0-9a-f]{6}$/i.test(c.color)?c.color:PALETTE[i%PALETTE.length],affection:clamp(parseInt(c.affection)||20,0,60),schedule:sched}});
+ const events=arr(d.events).slice(0,7).map((e,i)=>({day:i+1,title:String(e.title||'Day '+(i+1)).slice(0,60),room:mapR(e.room)||pr,start:/^\d{1,2}:\d{2}$/.test(e.start)?e.start:'19:00',end:/^\d{1,2}:\d{2}$/.test(e.end)?e.end:'22:00',cast:arr(e.cast).map(sid).filter(x=>cids.has(x)),desc:String(e.desc||'').slice(0,500),objective:String(e.objective||'').slice(0,200),final:i===6||undefined}));
+ const op=obj(d.opening);const end=obj(d.endings);const E=k=>({title:String(obj(end[k]).title||{group:'Together',one:'One Heart',found:'Found Family',out:'Moving Out'}[k]).slice(0,60),desc:String(obj(end[k]).desc||'').slice(0,300)});
+ return{id:'c_'+uid(),title:String(d.title||'Untitled story').slice(0,70),tagline:String(d.tagline||'').slice(0,140),tags:arr(d.tags).slice(0,4).map(t=>String(t).slice(0,20)),synopsis:String(d.synopsis||brief.prem).slice(0,700),goal:String(d.goal||'').slice(0,240),setting:String(d.setting||brief.set||'').slice(0,300),cover:String(d.cover||d.setting||'').slice(0,400),rules:String(d.rules||'').slice(0,300),player:brief.player,player_room:pr,rooms,characters:chars,events,
+  opening:{room:mapR(op.room)||pr,time:/^\d{1,2}:\d{2}$/.test(op.time)?op.time:'16:00',beats:arr(op.beats).slice(0,6).map(b=>({who:cids.has(sid(b.who))?sid(b.who):'narrator',text:String(b.text||'')})),suggestions:arr(op.suggestions).slice(0,3)},
+  endings:{group:E('group'),one:E('one'),found:E('found'),out:E('out')}}}
+
+/* ---------- ending ---------- */
+function showEnding(){const en=G.ended;if(!en)return;VIEW='ending';closeSheet();
+ app.innerHTML=`<div class="ending"><div class="page"><span class="kicker">${esc(STORY.title)} · Ending</span><h1>${esc(en.title)}</h1>
+ <div class="epi">${String(en.epi||'').split(/\n\s*\n/).map(p=>`<p>${fmt(p.trim())}</p>`).join('')}</div>
+ <h2 class="sec">Where everyone stands</h2><div class="stats">${STORY.characters.map(c=>`<div class="stat"><span>${esc(c.name)}</span><div class="bar"><i style="width:${G.chars[c.id].aff}%"></i></div><b>${G.chars[c.id].aff}</b></div>`).join('')}<div class="stat"><span>House Harmony</span><div class="bar hm"><i style="width:${G.harmony}%"></i></div><b>${G.harmony}</b></div></div>
+ <div class="btn-row"><button class="btn" data-act="tostory">Back to the story page</button><button class="btn ghost" data-act="home">Library</button></div></div></div>`}
+
+/* ---------- overlays ---------- */
+function cover(t,sub){uncover();const d=document.createElement('div');d.className='busy-cover';d.id='busycover';d.innerHTML=`<span class="dots"><i></i><i></i><i></i></span><h2>${esc(t)}</h2><p>${esc(sub||'')}</p>`;document.body.append(d)}
+function uncover(){$('#busycover')?.remove()}
+function zoom(k){const u=URLS.get(k);if(!u)return;const d=document.createElement('div');d.className='lightbox';d.innerHTML=`<img src="${u}" alt="Full-size picture">`;d.addEventListener('click',()=>d.remove());document.body.append(d)}
+
+/* ---------- backup ---------- */
+async function exportBackup(){const keys=await DB.keys();const data={};for(const k of keys){if(k==='settings')continue;data[k]=await DB.get(k)}
+ const blob=new Blob([JSON.stringify({app:'litwindows',v:1,data})],{type:'application/json'});const name=`lit-windows-backup-${new Date().toISOString().slice(0,10)}.json`;const file=new File([blob],name,{type:'application/json'});
+ try{if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Lit Windows backup'});return}}catch(e){if(e.name==='AbortError')return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
+async function importBackup(e){const f=e.target.files?.[0];if(!f)return;try{const j=JSON.parse(await f.text());if(j.app!=='litwindows')throw new Error();for(const[k,v]of Object.entries(obj(j.data)))if(k!=='settings')await DB.set(k,v);toast('Backup imported.',true);closeSheet();viewHome()}catch{toast('That file is not a Lit Windows backup.')}}
+
+/* ---------- actions ---------- */
+let armed=null;
+const ACT={
+ home:()=>viewHome(), settings:()=>openSettings(), create:()=>viewCreate(), closesheet:()=>{const wasSettings=SHEET==='settings';closeSheet();if(VIEW==='play')renderPlay();else if(VIEW==='home'&&wasSettings)viewHome()},
+ open:b=>viewStory(b.dataset.id), tostory:()=>viewStory(STORY.id),
+ async new(b){const id=STORY.id;if(await DB.get('save:'+id)&&armed!=='new'){armed='new';b.textContent='Tap again to overwrite';setTimeout(()=>{if(armed==='new'){armed=null;if(b.isConnected)b.textContent='Start new'}},3500);return}armed=null;
+  const pl={...STORY.player,...obj(await DB.get('player:'+id))};G=newGame(STORY,pl);lastTurn=null;await save();viewPlay()},
+ async continue(){G=await DB.get('save:'+STORY.id);if(!G)return;for(const c of STORY.characters)if(!G.chars[c.id])G.chars[c.id]={aff:20,mood:'Curious',ov:null,outfit:'',thoughts:[],diary:[]};lastTurn=null;G.ended?showEnding():viewPlay()},
+ leave:()=>viewStory(STORY.id),
+ sug:b=>{const s=G.sugs[+b.dataset.i];if(s&&!busy)playerTurn(sugText(s))},
+ editsug:b=>{const s=G.sugs[+b.dataset.i];const i=$('#inp');i.value=sugText(s);i.dispatchEvent(new Event('input'));i.focus()},
+ togglesugs:()=>{showSugs=!showSugs;renderPlay()},
+ star:()=>{const i=$('#inp'),p=i.selectionStart??i.value.length;i.value=i.value.slice(0,p)+'**'+i.value.slice(p);i.focus();i.setSelectionRange(p+1,p+1)},
+ regen:()=>{if(busy||!lastTurn)return;const{snap,text,opts}=lastTurn;G=clone(snap);playerTurn(text,opts)},
+ picture:()=>{if(S.imgType==='off')return toast('Images are turned off in Settings.');const here=present(),r=room(G.room);const last=G.msgs.filter(m=>m.k==='n'||m.k==='c').slice(-3).map(m=>(m.k==='c'?chr(m.who)?.name+': ':'')+m.t.replace(/\*/g,'')).join(' ');
+  const k=imgKey('scn',STORY.id,uid());pushMsg({k:'i',key:k});
+  queueImg(k,`${S.artStyle}. Scene in ${r?r.name+', '+r.desc:'the house'} at ${partOf(G.min)}. ${here.map(c=>`${c.name}, ${gword(c)} aged ${c.age}: ${c.look}, wearing ${outfitOf(c)}`).join('. ')}. Moment: ${last.slice(0,650)}`,768,1024,true);save();renderPlay()},
+ zoom:b=>zoom(b.dataset.k),
+ map:()=>{SHEET='map';selRoom=null;openSheet('The house',mapBody())},
+ chars:()=>{SHEET='chars';openSheet('Characters',charsBody())},
+ gallery:()=>{SHEET='gallery';openSheet('Gallery',galleryBody())},
+ room:b=>{selRoom=b.dataset.id;refreshSheet();$('#sb').scrollTop=0},
+ goroom:b=>{const id=b.dataset.id;closeSheet();playerTurn(`*heads to the ${roomName(id)}*`,{move:id,hidden:true})},
+ wait:()=>{closeSheet();playerTurn('*lets an hour pass doing their own thing around the house*',{hidden:true,minutes:60,note:'An hour passes.'})},
+ sleep:()=>{closeSheet();endDay()},
+ selchar:b=>{selChar=b.dataset.id;refreshSheet()},
+ ctab:b=>{cTab=b.dataset.t;refreshSheet()},
+ setpor:async b=>{const blob=await DB.get(b.dataset.k,'img');if(!blob)return;const k=imgKey('por',STORY.id,selChar);await DB.set(k,blob,'img');setURL(k,blob);paint(k);refreshSheet();toast('Portrait updated.',true)},
+ async loadmodels(){try{const r1=await fetch(base()+'/models?type=text',{headers:S.apiKey?{Authorization:'Bearer '+S.apiKey}:{}});const d1=await r1.json();$('#dl-text').innerHTML=arr(d1.data).map(m=>`<option value="${esc(m.id)}">`).join('');
+  if(S.imgType==='venice'){const r2=await fetch('https://api.venice.ai/api/v1/models?type=image');const d2=await r2.json();$('#dl-img').innerHTML=arr(d2.data).map(m=>`<option value="${esc(m.id)}">`).join('')}toast(`Loaded ${arr(d1.data).length} models. Tap a model field to pick one.`,true)}catch{toast('Could not load the model list.')}},
+ async testai(b){b.disabled=true;b.textContent='Testing…';try{const t=await chat([{role:'user',content:'Reply with the single word: ready'}],{max:20,temp:0});toast('Connected. The AI said: '+t.slice(0,40),true)}catch(e){toast(e.message)}b.disabled=false;b.textContent='Test connection'},
+ export:()=>exportBackup(),
+ async clearimgs(b){if(armed!=='clr'){armed='clr';b.textContent='Tap again to delete every image';return}armed=null;await DB.clear('img');URLS.forEach(u=>URL.revokeObjectURL(u));URLS.clear();b.textContent='Images deleted';toast('All images deleted.',true)},
+ async delstory(b){if(armed!=='del'){armed='del';b.textContent='Tap again to delete the story and its save';return}armed=null;const id=STORY.id;await DB.set('stories',arr(await DB.get('stories')).filter(s=>s.id!==id));await DB.del('save:'+id);await DB.del('endings:'+id);viewHome()},
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;if(ACT[a]){e.preventDefault();ACT[a](b,e)}});
+document.addEventListener('submit',e=>{if(e.target.id==='outform'){e.preventDefault();const d=$('#outdesc').value.trim();if(!d)return;const c=chr(selChar);const k=imgKey('out',STORY.id,c.id,uid());G.chars[c.id].outfit=d;save();queueImg(k,portraitPrompt(c,d),768,1024,true);refreshSheet()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('.lightbox'))$('.lightbox').remove();else if(!sheet.hidden)ACT.closesheet()}});
+
+/* ---------- boot ---------- */
+(async()=>{try{S={...DEF,...obj(await DB.get('settings'))}}catch(e){toast('Storage is unavailable, so progress will not be saved. Turn off Private Browsing.')}
+ viewHome();
+ if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{})})();
+</script>
+</body>
+</html>
